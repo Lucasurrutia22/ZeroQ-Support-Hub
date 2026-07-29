@@ -3,6 +3,7 @@ import { PrismaTagRepository } from "./persistence/PrismaTagRepository";
 import { PrismaProcedureRepository } from "./persistence/PrismaProcedureRepository";
 import { PrismaDocumentRepository } from "./persistence/PrismaDocumentRepository";
 import { PrismaFavoriteRepository } from "./persistence/PrismaFavoriteRepository";
+import { PrismaViewHistoryRepository } from "./persistence/PrismaViewHistoryRepository";
 import { SupabaseFileStorage } from "@/shared/infrastructure/storage/SupabaseFileStorage";
 import { contentIndexer } from "@/modules/search-ai/infrastructure/ContentIndexerAdapter";
 
@@ -14,6 +15,7 @@ export const tagRepository = new PrismaTagRepository();
 export const procedureRepository = new PrismaProcedureRepository();
 export const documentRepository = new PrismaDocumentRepository();
 export const favoriteRepository = new PrismaFavoriteRepository();
+export const viewHistoryRepository = new PrismaViewHistoryRepository();
 export const documentStorage = new SupabaseFileStorage("documents");
 // Reexportado desde search-ai/infrastructure (implementa el port compartido
 // ContentIndexer, ver src/shared/domain/ports/content-indexer.ts) — los use

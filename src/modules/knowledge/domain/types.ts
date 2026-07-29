@@ -68,3 +68,18 @@ export interface Favorite {
   procedureId: string;
   createdAt: Date;
 }
+
+export type ViewedEntityType = "procedure" | "document";
+
+// Entrada de historial ya enriquecida con lo que la UI necesita mostrar
+// (título, link) — resuelto por PrismaViewHistoryRepository vía join a
+// Procedure/Document, mismo criterio que RankedChunk en search-ai (nunca
+// hacer que la UI resuelva el link a mano).
+export interface ViewHistoryEntry {
+  id: string;
+  entityType: ViewedEntityType;
+  entityId: string;
+  viewedAt: Date;
+  title: string;
+  url: string;
+}

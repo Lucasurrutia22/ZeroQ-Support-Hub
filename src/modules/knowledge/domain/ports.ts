@@ -8,6 +8,8 @@ import type {
   ProcedureWithDetails,
   RiskLevel,
   Tag,
+  ViewedEntityType,
+  ViewHistoryEntry,
 } from "./types";
 
 // Ports (interfaces) — los use cases dependen de estas, no de Prisma
@@ -92,6 +94,13 @@ export interface FavoriteRepository {
   add(userId: string, procedureId: string): Promise<void>;
   remove(userId: string, procedureId: string): Promise<void>;
   listByUser(userId: string): Promise<ProcedureWithDetails[]>;
+}
+
+// UC-EN-02 — "upsert" de viewedAt (ver comentario del modelo en
+// schema.prisma), nunca un log de cada vista por separado.
+export interface ViewHistoryRepository {
+  recordView(userId: string, entityType: ViewedEntityType, entityId: string): Promise<void>;
+  listByUser(userId: string, limit?: number): Promise<ViewHistoryEntry[]>;
 }
 
 // El almacenamiento de archivos usa el port genérico compartido

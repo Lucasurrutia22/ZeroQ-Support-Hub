@@ -40,3 +40,10 @@ export function canFavorite(role: Role): boolean {
   void role; // firma consistente con el resto de las policies; todos los roles pueden
   return true;
 }
+
+// UC-EN-02: ver el propio historial de vistas — todos los roles, es
+// información personal del usuario, no un dato sensible del negocio.
+export function canViewOwnHistory(role: Role): boolean {
+  void role;
+  return true;
+}

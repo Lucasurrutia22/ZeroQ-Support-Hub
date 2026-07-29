@@ -2,6 +2,7 @@ import type {
   DocumentFileType,
   ProcedureStatus,
   RiskLevel,
+  ViewedEntityType,
 } from "@/modules/knowledge/domain/types";
 
 // Etiquetas/estilos puramente de presentación para el módulo Knowledge —
@@ -46,6 +47,17 @@ export const DOCUMENT_FILE_TYPE_LABELS: Record<DocumentFileType, string> = {
   otro: "Otro",
 };
 
+export const VIEWED_ENTITY_TYPE_LABELS: Record<ViewedEntityType, string> = {
+  procedure: "Procedimiento",
+  document: "Documento",
+};
+
+export const VIEWED_ENTITY_TYPE_BADGE_CLASSES: Record<ViewedEntityType, string> = {
+  procedure:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400",
+  document: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+};
+
 // Códigos de error que redirigen las Server Actions ya implementadas (ver
 // src/app/(dashboard)/procedures/actions.ts, .../categories/actions.ts,
 // .../documents/actions.ts) — mapeo de código -> mensaje en español.
@@ -68,4 +80,14 @@ export function errorMessageFor(code?: string | null): string | null {
 
 export function badgeClass(base: string): string {
   return `inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${base}`;
+}
+
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("es-CL", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
