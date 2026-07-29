@@ -14,9 +14,9 @@ import {
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; categoryId?: string; clientId?: string }>;
+  searchParams: Promise<{ q?: string; categoryId?: string }>;
 }) {
-  const { q, categoryId, clientId } = await searchParams;
+  const { q, categoryId } = await searchParams;
   const query = q?.trim() ?? "";
 
   // semanticSearch puede lanzar si el EmbeddingProvider (Voyage) falla —
@@ -27,7 +27,7 @@ export default async function SearchPage({
   let providerError = false;
   if (query) {
     try {
-      results = await semanticSearch(query, { categoryId, clientId }, 10);
+      results = await semanticSearch(query, { categoryId }, 10);
     } catch {
       providerError = true;
     }
@@ -38,7 +38,7 @@ export default async function SearchPage({
       <div>
         <h1 className="text-2xl font-semibold">Buscador</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Busca en procedimientos aprobados y casos resueltos usando lenguaje natural.
+          Busca en procedimientos aprobados usando lenguaje natural.
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export default async function SearchPage({
         />
         <button
           type="submit"
-          className="shrink-0 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className="shrink-0 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
         >
           Buscar
         </button>

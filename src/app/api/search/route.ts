@@ -25,7 +25,6 @@ export async function GET(request: Request) {
     input = searchQuerySchema.parse({
       q: searchParams.get("q"),
       categoryId: searchParams.get("categoryId") ?? undefined,
-      clientId: searchParams.get("clientId") ?? undefined,
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -40,7 +39,6 @@ export async function GET(request: Request) {
   try {
     const results = await semanticSearch(input.q, {
       categoryId: input.categoryId,
-      clientId: input.clientId,
     });
     return NextResponse.json({ results });
   } catch {

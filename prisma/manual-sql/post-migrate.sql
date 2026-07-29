@@ -6,12 +6,10 @@
 -- CHECK de Attachment, escrita en snake_case cuando Prisma genera camelCase
 -- entre comillas dobles al no usar @map/@@map en estos modelos).
 
--- 1) CHECK pendiente de Attachment (documentado desde la Fase Support,
---    nunca aplicado por el mismo bloqueo de credenciales): exactamente uno
---    de "procedureId"/"caseId" debe ser no-nulo.
-ALTER TABLE "Attachment"
-  ADD CONSTRAINT "attachment_exactly_one_owner_chk"
-  CHECK (num_nonnulls("procedureId", "caseId") = 1);
+-- 1) (Histórico) CHECK de Attachment ("exactamente uno de procedureId/caseId
+--    no-nulo") — el modelo Attachment y la tabla se eliminaron junto con el
+--    módulo Cases (2026-07-29); el CHECK se fue con el DROP TABLE, no hace
+--    falta hacer nada acá.
 
 -- 2) Índice HNSW sobre el embedding de DocumentChunk — golden path de la
 --    skill pgvector-semantic-search: halfvec + cosine + HNSW por defecto.

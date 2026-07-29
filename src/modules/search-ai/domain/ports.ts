@@ -30,7 +30,6 @@ export interface NewChunkInput {
   content: string;
   chunkIndex: number;
   categoryId: string | null;
-  clientId: string | null;
   embedding: number[];
 }
 
@@ -48,7 +47,7 @@ export interface VectorStore {
   /** Borra los chunks de una o más fuentes antes de re-indexar (AI_RAG_DESIGN.md §3: re-chunk completo, no diff). */
   deleteBySource(sourceType: DocumentChunkSourceType, sourceIds: string[]): Promise<void>;
   insertChunks(chunks: NewChunkInput[]): Promise<void>;
-  /** Sin enriquecer (sin citationTag/sourceTitle) — VectorStore no conoce Knowledge/Cases. */
+  /** Sin enriquecer (sin citationTag/sourceTitle) — VectorStore no conoce Knowledge. */
   hybridSearch(input: HybridSearchInput): Promise<ScoredChunk[]>;
 }
 
@@ -110,11 +109,10 @@ export function withMessages(
   return { ...conversation, messages };
 }
 
-// Lectura de solo-consulta sobre Knowledge/Cases para indexación — patrón
+// Lectura de solo-consulta sobre Knowledge para indexación — patrón
 // "CQRS ligero" ya documentado en ARCHITECTURE.md §8 (lecturas de otros
 // agregados sin pasar por sus repositorios de escritura). Devuelve null si
-// la fuente no existe o si Cases todavía no tiene contenido indexable
-// (ej. un ResolvedCase sin solution, invariante que ya impide crearlo vacío).
+// la fuente no existe.
 export interface IndexableContent {
   sourceType: DocumentChunkSourceType;
   /** Para procedure_version: todas las versiones de ESE procedimiento (para borrar las viejas antes de reindexar). */
@@ -122,7 +120,6 @@ export interface IndexableContent {
   title: string;
   markdown: string;
   categoryId: string | null;
-  clientId: string | null;
 }
 
 export interface SourceContentReader {

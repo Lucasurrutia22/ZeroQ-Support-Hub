@@ -29,8 +29,8 @@ export async function semanticSearch(
   return scored
     .map((chunk) => {
       const meta = metadata.get(`${chunk.sourceType}:${chunk.sourceId}`);
-      // Edge case raro: el Procedure/ResolvedCase fue borrado entre
-      // indexación y consulta — se omite en vez de mostrar una cita rota.
+      // Edge case raro: el Procedure fue borrado entre indexación y
+      // consulta — se omite en vez de mostrar una cita rota.
       if (!meta) return null;
       return {
         ...chunk,

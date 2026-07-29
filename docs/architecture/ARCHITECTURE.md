@@ -95,6 +95,12 @@ graph TB
 | Administración, Configuración | **Identity** (usuarios/roles) + `shared/infrastructure` (config) |
 | Auditoría | **Analytics** (o su propio sub-módulo `audit`, ver §9) |
 
+**Nota (2026-07-29):** el módulo **Dashboard** y el bounded context **Cases** + **Clients** (filas
+"Dashboard" y "Casos Resueltos"/"Clientes, Infraestructura" de la tabla) se implementaron completos
+y luego se eliminaron por completo — sin uso real, pedido explícito del usuario. El diagrama de §3
+y esta tabla quedan como registro histórico del diseño original; el estado real del código está en
+`ROADMAP.md` (Fase 4) y `AI_RAG_DESIGN.md` §13, con el detalle de qué se borró y por qué.
+
 ---
 
 ## 5. Entidades y relaciones

@@ -47,7 +47,6 @@ export async function indexContent(
         content: candidate.content,
         chunkIndex: candidate.chunkIndex,
         categoryId: source.categoryId,
-        clientId: source.clientId,
         embedding: embeddings[index],
       })),
     );

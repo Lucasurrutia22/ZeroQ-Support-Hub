@@ -477,3 +477,16 @@ implementan la misma spec `LanguageModelV2`, así que no hizo falta una clase po
    modelo de 3B ya visto en los puntos 6 y en el bug de citas. Decisión del usuario (2026-07-29):
    seguir con Ollama aceptando esta inconsistencia en vez de cambiar a un proveedor de pago. `RETRIEVAL_TOP_K`
    se probó bajar de 8 a 6 para latencia pero empeoró la precisión de citas — se revirtió a 8.
+8. **Módulo Cases eliminado (2026-07-29, ROADMAP.md Fase 4) — `DocumentChunkSourceType` quedó en
+   `"procedure_version"` únicamente**, ya no `"procedure_version" | "resolved_case"`. Se simplificó
+   en cascada todo lo que distinguía Procedure de ResolvedCase: `similarCases` (campo del output
+   estructurado del LLM) se eliminó, el boost de confianza `PROCEDURE_TRUST_BOOST` en
+   `PgVectorStore` se quitó (quedaba matemáticamente inerte al no haber una segunda fuente con la
+   que comparar), `SourceMetadataReader`/`PrismaSourceContentReader` perdieron su rama
+   `resolved_case`, y el prompt de `ask-ai.ts` ya no distingue "caso resuelto (no revisado)" de
+   "procedimiento aprobado" — todo lo citado internamente es ahora, por definición, un procedimiento
+   aprobado. `DocumentChunk.clientId` (poblado antes desde `ResolvedCase.clientId`) también se
+   eliminó de la columna y del filtro de búsqueda (`SearchFilters`), igual que `Client`/
+   `InfrastructureAsset` a nivel de schema. El índice HNSW, el GIN de `contentSearch` y los 109
+   chunks de la Bitácora no se tocaron — la migración se hizo a mano (SQL directo, no
+   `prisma migrate dev`) específicamente para preservarlos, ver `prisma/manual-sql/README.md`.

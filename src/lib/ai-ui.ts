@@ -6,19 +6,15 @@ import type { SourceReferenceType } from "@/modules/search-ai/domain/types";
 
 export const SOURCE_TYPE_LABELS: Record<SourceReferenceType, string> = {
   procedure_version: "Procedimiento",
-  resolved_case: "Caso Resuelto",
   web: "Fuente externa (no verificada)",
 };
 
-// Procedimiento = contenido aprobado (verificado); Caso Resuelto = contenido
-// no revisado (AI_RAG_DESIGN.md §4.2) — misma paleta que
-// knowledge-ui.ts STATUS_BADGE_CLASSES.approved / .in_review. "web" usa un
-// gris neutro deliberadamente distinto de ambos: no es contenido de ZeroQ.
+// Procedimiento = contenido propio aprobado/verificado (AI_RAG_DESIGN.md
+// §4.2) — misma paleta que knowledge-ui.ts STATUS_BADGE_CLASSES.approved.
+// "web" usa un gris neutro deliberadamente distinto: no es contenido de ZeroQ.
 export const SOURCE_TYPE_BADGE_CLASSES: Record<SourceReferenceType, string> = {
   procedure_version:
     "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400",
-  resolved_case:
-    "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
   web: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 

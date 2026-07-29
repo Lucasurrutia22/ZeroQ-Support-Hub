@@ -15,7 +15,7 @@ export default async function AIChatPage() {
   const role = session!.user.role;
 
   if (!canUseAI(role)) {
-    redirect("/dashboard");
+    redirect("/procedures");
   }
 
   const result = await listConversations({ id: session!.user.id, role });

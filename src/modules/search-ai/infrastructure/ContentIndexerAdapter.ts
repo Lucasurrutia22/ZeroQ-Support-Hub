@@ -2,8 +2,8 @@ import type { ContentIndexer, IndexableSourceType } from "@/shared/domain/ports/
 import { indexContent } from "../application/use-cases/index-content";
 
 // Implementa el port compartido ContentIndexer (src/shared/domain/ports/
-// content-indexer.ts) para que Knowledge/Cases puedan disparar indexación
-// sin importar nada de search-ai más allá de este contrato mínimo.
+// content-indexer.ts) para que Knowledge pueda disparar indexación sin
+// importar nada de search-ai más allá de este contrato mínimo.
 //
 // Simplificación deliberada respecto a D7/ARCHITECTURE.md §9 (BullMQ + Redis
 // como cola de jobs): no se levantó esa infraestructura en este alcance —

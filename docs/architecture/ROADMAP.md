@@ -60,17 +60,18 @@ manual.
 
 ---
 
-## Fase 4 — Cases & Clients
+## Fase 4 — Cases & Clients — **eliminada (2026-07-29)**
 
-Más simple que Fase 3 (supporting subdomains, sin flujo de aprobación) — construye sobre el mismo
-patrón ya validado.
+Se implementó completa (`Client`, `InfrastructureAsset`, `ResolvedCase`, `CaseProcedure`,
+`Attachment`, UI y use cases) y luego se eliminó por completo: sin uso real, pedido explícito del
+usuario ("elimina los módulos que no se utilicen"). Verificado antes de borrar: las 5 tablas
+estaban vacías (0 filas reales). Detalle del borrado (código + schema + SQL manual) en
+`AI_RAG_DESIGN.md` §13 y en la memoria del proyecto. El commit de git previo a la eliminación queda
+como respaldo si se necesita reintroducir el módulo.
 
-- `Client`, `InfrastructureAsset` (UC-CL-01 a 04).
-- `ResolvedCase`, vínculo con `Procedure` (UC-CS-01 a 04).
-- UI correspondiente.
-
-**Gate de salida:** un caso resuelto puede documentarse vinculado a un cliente/activo real y a los
-procedimientos que se usaron para resolverlo.
+~~- `Client`, `InfrastructureAsset` (UC-CL-01 a 04).~~
+~~- `ResolvedCase`, vínculo con `Procedure` (UC-CS-01 a 04).~~
+~~- UI correspondiente.~~
 
 ---
 
@@ -96,7 +97,8 @@ reales.
 - UI: buscador + chat conversacional según el patrón definido en `UI_UX_DESIGN.md`.
 
 **Gate de salida:** el flujo principal completo del brief funciona de punta a punta — "el tótem no
-imprime" → la IA responde citando procedimientos/casos reales indexados en Fases 3-4.
+imprime" → la IA responde citando procedimientos reales indexados en Fase 3 (Fase 4/Cases se
+eliminó, ver arriba — la IA solo cita `Procedure` desde 2026-07-29).
 
 ---
 

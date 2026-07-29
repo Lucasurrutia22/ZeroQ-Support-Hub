@@ -28,7 +28,6 @@ interface RawChunkRow {
   content: string;
   chunkIndex: number;
   categoryId: string | null;
-  clientId: string | null;
 }
 
 function toHalfvecLiteral(embedding: number[]): string {
@@ -36,15 +35,8 @@ function toHalfvecLiteral(embedding: number[]): string {
 }
 
 function buildFilterClause(filters: HybridSearchInput["filters"]): Prisma.Sql {
-  const conditions: Prisma.Sql[] = [];
-  if (filters?.categoryId) {
-    conditions.push(Prisma.sql`"categoryId" = ${filters.categoryId}`);
-  }
-  if (filters?.clientId) {
-    conditions.push(Prisma.sql`"clientId" = ${filters.clientId}`);
-  }
-  if (conditions.length === 0) return Prisma.sql``;
-  return Prisma.sql`AND ${Prisma.join(conditions, " AND ")}`;
+  if (!filters?.categoryId) return Prisma.sql``;
+  return Prisma.sql`AND "categoryId" = ${filters.categoryId}`;
 }
 
 export class PgVectorStore implements VectorStore {
@@ -62,14 +54,14 @@ export class PgVectorStore implements VectorStore {
 
   async insertChunks(chunks: NewChunkInput[]): Promise<void> {
     // Un INSERT por chunk: simple y suficiente para el volumen esperado
-    // (~5-15 chunks por Procedure/ResolvedCase) corriendo async fuera del
+    // (~5-15 chunks por Procedure) corriendo async fuera del
     // request del usuario (ContentIndexer.indexAsync). Si el volumen crece
     // mucho, es un cambio local a este método (VALUES multi-fila), no un
     // cambio de contrato del port.
     for (const chunk of chunks) {
       await prisma.$executeRaw`
         INSERT INTO "DocumentChunk"
-          (id, "sourceType", "sourceId", content, "chunkIndex", "categoryId", "clientId", embedding)
+          (id, "sourceType", "sourceId", content, "chunkIndex", "categoryId", embedding)
         VALUES (
           ${randomUUID()},
           ${chunk.sourceType}::"DocumentChunkSourceType",
@@ -77,7 +69,6 @@ export class PgVectorStore implements VectorStore {
           ${chunk.content},
           ${chunk.chunkIndex},
           ${chunk.categoryId},
-          ${chunk.clientId},
           ${toHalfvecLiteral(chunk.embedding)}::halfvec(1024)
         )
       `;
@@ -90,14 +81,14 @@ export class PgVectorStore implements VectorStore {
 
     const [vectorRows, textRows] = await Promise.all([
       prisma.$queryRaw<RawChunkRow[]>`
-        SELECT id, "sourceType", "sourceId", content, "chunkIndex", "categoryId", "clientId"
+        SELECT id, "sourceType", "sourceId", content, "chunkIndex", "categoryId"
         FROM "DocumentChunk"
         WHERE true ${filterClause}
         ORDER BY embedding <=> ${vectorLiteral}::halfvec(1024)
         LIMIT ${CANDIDATE_POOL_SIZE}
       `,
       prisma.$queryRaw<RawChunkRow[]>`
-        SELECT id, "sourceType", "sourceId", content, "chunkIndex", "categoryId", "clientId"
+        SELECT id, "sourceType", "sourceId", content, "chunkIndex", "categoryId"
         FROM "DocumentChunk"
         WHERE "contentSearch" @@ plainto_tsquery('spanish', ${input.queryText}) ${filterClause}
         ORDER BY ts_rank("contentSearch", plainto_tsquery('spanish', ${input.queryText})) DESC
@@ -109,14 +100,10 @@ export class PgVectorStore implements VectorStore {
   }
 }
 
-// Boost de confianza (zeroq-rag §5 / AI_RAG_DESIGN.md §5): a igual score, un
-// chunk de Procedure (contenido revisado/aprobado) se prioriza sobre uno de
-// ResolvedCase (no revisado). Se aplica como multiplicador chico sobre el
-// score de RRF ya calculado, no como una señal de ranking aparte.
-const PROCEDURE_TRUST_BOOST = 1.05;
-
 // Reciprocal Rank Fusion (AI_RAG_DESIGN.md §5): score = Σ 1/(k + rank_i)
-// sobre las dos listas rankeadas, sin pesos calibrados a mano.
+// sobre las dos listas rankeadas, sin pesos calibrados a mano. (El boost de
+// confianza Procedure vs. ResolvedCase que vivía acá se quitó junto con el
+// módulo Cases — ya no hay una segunda fuente con la que comparar.)
 function fuseRankedLists(vectorRows: RawChunkRow[], textRows: RawChunkRow[]): ScoredChunk[] {
   const scores = new Map<string, number>();
   const rowById = new Map<string, RawChunkRow>();
@@ -134,11 +121,9 @@ function fuseRankedLists(vectorRows: RawChunkRow[], textRows: RawChunkRow[]): Sc
   accumulate(textRows);
 
   return Array.from(scores.entries())
-    .map(([id, rrfScore]) => {
+    .map(([id, score]) => {
       const row = rowById.get(id);
       if (!row) throw new Error("Fila de document_chunks perdida durante la fusión RRF");
-      const score =
-        row.sourceType === "procedure_version" ? rrfScore * PROCEDURE_TRUST_BOOST : rrfScore;
       return { ...row, score };
     })
     .sort((a, b) => b.score - a.score);

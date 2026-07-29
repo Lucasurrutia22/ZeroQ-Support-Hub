@@ -14,7 +14,7 @@ export const proxy = auth((req) => {
   }
 
   if (isLoggedIn && isLoginPage) {
-    return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
+    return Response.redirect(new URL("/procedures", req.nextUrl.origin));
   }
 });
 

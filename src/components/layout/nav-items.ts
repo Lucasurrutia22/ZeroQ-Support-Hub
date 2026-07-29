@@ -24,7 +24,6 @@ export interface NavItem {
  * de ARCHITECTURE.md §6 y quedan pendientes de confirmación final.
  */
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", roles: ALL_ROLES },
   { label: "Procedimientos", href: "/procedures", roles: ALL_ROLES },
   {
     label: "Bitácora de Tótems",
@@ -38,8 +37,6 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ALL_ROLES,
     note: "[PROPUESTA] Entidad Document (D5), separada de Procedure — ARCHITECTURE.md §5.3.",
   },
-  { label: "Casos Resueltos", href: "/cases", roles: ALL_ROLES },
-  { label: "Clientes", href: "/clients", roles: ALL_ROLES },
   { label: "Buscador", href: "/search", roles: ALL_ROLES },
   {
     label: "Asistente IA",

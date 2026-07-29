@@ -19,7 +19,7 @@ export default async function AIConversationPage({
   const role = session!.user.role;
 
   if (!canUseAI(role)) {
-    redirect("/dashboard");
+    redirect("/procedures");
   }
 
   const actingUser = { id: session!.user.id, role };
@@ -35,7 +35,7 @@ export default async function AIConversationPage({
     // debería ocurrir tras el chequeo de canUseAI de arriba, pero se cubre
     // igual por si el rol cambia entre el redirect y esta llamada.
     if (conversationResult.error.code === "forbidden") {
-      redirect("/dashboard");
+      redirect("/procedures");
     }
     notFound();
   }

@@ -10,5 +10,4 @@ export const askAISchema = z.object({
 export const searchQuerySchema = z.object({
   q: z.string().trim().min(1, "La búsqueda no puede estar vacía.").max(500),
   categoryId: z.string().min(1).optional(),
-  clientId: z.string().min(1).optional(),
 });

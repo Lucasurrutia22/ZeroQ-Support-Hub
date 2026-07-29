@@ -1,22 +1,21 @@
 // ZeroQ Support Hub — Prisma schema
 // Alcance actual: Authentication (Identity) + Knowledge (Procedimientos,
-// Categorías, Etiquetas, Versiones, Documentación, Favoritos) + Support
-// (Clientes, Infraestructura, Casos Resueltos/Incidencias, Evidencias/Logs)
+// Categorías, Etiquetas, Versiones, Documentación, Favoritos)
 // + Search & AI (RAG — ver docs/architecture/AI_RAG_DESIGN.md).
+//
+// Support (Clientes, Infraestructura, Casos Resueltos/Incidencias,
+// Evidencias/Logs) existió acá hasta el 2026-07-29 — se eliminó por completo
+// (módulo sin uso real, pedido explícito del usuario). El commit previo a la
+// eliminación queda en git como respaldo si hace falta reintroducirlo.
 //
 // Desviaciones deliberadas respecto a DATABASE_DESIGN.md, acordadas (ver
 // docs/architecture/ARCHITECTURE.md si se necesita el detalle):
 //   - Sin `ReviewRequest`: el estado de Procedure transiciona directo
 //     (draft -> in_review -> approved/deprecated), gateado por Policy de rol,
 //     sin tabla de auditoría de revisión separada todavía.
-//   - Sin `Comment`, `ViewHistory` — no pedidos todavía.
-//   - `Attachment`: se construye ahora solo el lado `caseId` (Evidencias/Logs
-//     de Casos) — `procedureId` queda en el modelo (documentado como
-//     polimórfico en DATABASE_DESIGN.md) pero sin UI de subida en Knowledge
-//     todavía. El CHECK "exactamente uno de los dos no-nulo" NO se puede
-//     expresar en schema.prisma (Prisma no soporta @@check nativo, verificado
-//     de nuevo en Prisma 7) — se agrega a mano en la migración SQL y se
-//     refuerza también en el use case de subida.
+//   - Sin `Comment`, `Attachment` — no pedidos todavía (Attachment vivía acá
+//     para Evidencias/Logs de Casos, se fue con Support). `ViewHistory` sí
+//     se agregó (2026-07-29, UC-EN-02) — ver modelo más abajo.
 //   - `Document.clientId` sigue sin implementarse (documentos no se asocian
 //     a un cliente específico todavía) — no era parte de este pedido tampoco.
 //
@@ -51,13 +50,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  authoredProcedures  Procedure[]        @relation("ProcedureAuthor")
-  authoredVersions    ProcedureVersion[] @relation("ProcedureVersionAuthor")
-  uploadedDocuments   Document[]         @relation("DocumentUploadedBy")
-  favorites           Favorite[]
-  resolvedCases       ResolvedCase[]     @relation("CaseEngineer")
-  uploadedAttachments Attachment[]       @relation("AttachmentUploadedBy")
-  aiConversations     AIConversation[]
+  authoredProcedures Procedure[]        @relation("ProcedureAuthor")
+  authoredVersions   ProcedureVersion[] @relation("ProcedureVersionAuthor")
+  uploadedDocuments  Document[]         @relation("DocumentUploadedBy")
+  favorites          Favorite[]
+  aiConversations    AIConversation[]
+  viewHistory        ViewHistory[]
 
   @@map("users")
 }
@@ -94,9 +92,8 @@ model Category {
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children Category[] @relation("CategoryHierarchy")
 
-  procedures    Procedure[]
-  documents     Document[]
-  resolvedCases ResolvedCase[]
+  procedures Procedure[]
+  documents  Document[]
 
   @@index([parentId])
 }
@@ -120,8 +117,6 @@ model Procedure {
   versions       ProcedureVersion[] @relation("ProcedureVersions")
   tags           ProcedureTag[]
   favorites      Favorite[]
-  cases          CaseProcedure[]
-  attachments    Attachment[]
 
   @@index([categoryId])
   @@index([status])
@@ -193,130 +188,30 @@ model Favorite {
   @@index([procedureId])
 }
 
-// ---------------------------------------------------------------------------
-// Support: Clients + Cases (Casos Resueltos/Incidencias, Evidencias/Logs)
-// ---------------------------------------------------------------------------
-
-enum ClientType {
-  banco
-  hospital
-  municipalidad
-  retail
-  gobierno
-  otro
+enum ViewedEntityType {
+  procedure
+  document
 }
 
-enum AssetType {
-  totem
-  modulo_atencion
-  pantalla
-  impresora
-  servidor
-  tv_box
-  otro
-}
+// Historial de vistas (UC-EN-02) — un registro por (usuario, entidad),
+// "upsert" de viewedAt en cada visita en vez de loguear cada vista por
+// separado: para "recientemente visto" alcanza con la última vez, y evita
+// que la tabla crezca sin límite con usuarios que revisitan el mismo
+// procedimiento seguido. Polimórfico por entityType/entityId (mismo patrón
+// que DocumentChunk en Search & AI) en vez de dos FK nullable — Procedure y
+// Document son bounded contexts distintos dentro de Knowledge, no vale la
+// pena una tabla por tipo para una sola columna de metadata.
+model ViewHistory {
+  id         String           @id @default(cuid())
+  userId     String
+  entityType ViewedEntityType
+  entityId   String
+  viewedAt   DateTime         @default(now())
 
-model Client {
-  id          String     @id @default(cuid())
-  name        String
-  type        ClientType
-  contactInfo Json?
-  active      Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  user User @relation(fields: [userId], references: [id])
 
-  assets        InfrastructureAsset[]
-  resolvedCases ResolvedCase[]
-
-  @@index([type])
-  @@index([active])
-}
-
-model InfrastructureAsset {
-  id           String    @id @default(cuid())
-  clientId     String
-  type         AssetType
-  model        String?
-  location     String?
-  serialNumber String?
-  metadata     Json?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  client        Client         @relation(fields: [clientId], references: [id])
-  resolvedCases ResolvedCase[]
-
-  @@index([clientId])
-  @@index([type])
-}
-
-model ResolvedCase {
-  id                    String   @id @default(cuid())
-  title                 String
-  description           String   @db.Text
-  clientId              String?
-  infrastructureAssetId String?
-  categoryId            String
-  engineerId            String
-  symptoms              String   @db.Text
-  rootCause             String   @db.Text
-  solution              String   @db.Text
-  timeSpentMinutes      Int?
-  resolvedAt            DateTime @default(now())
-  createdAt             DateTime @default(now())
-
-  client              Client?              @relation(fields: [clientId], references: [id])
-  infrastructureAsset InfrastructureAsset? @relation(fields: [infrastructureAssetId], references: [id])
-  category            Category             @relation(fields: [categoryId], references: [id])
-  engineer            User                 @relation("CaseEngineer", fields: [engineerId], references: [id])
-  attachments         Attachment[]
-  procedures          CaseProcedure[]
-
-  @@index([clientId])
-  @@index([infrastructureAssetId])
-  @@index([categoryId])
-  @@index([engineerId])
-  @@index([resolvedAt])
-}
-
-model CaseProcedure {
-  caseId      String
-  procedureId String
-
-  case      ResolvedCase @relation(fields: [caseId], references: [id])
-  procedure Procedure    @relation(fields: [procedureId], references: [id])
-
-  @@id([caseId, procedureId])
-  @@index([procedureId])
-}
-
-enum AttachmentFileType {
-  image
-  video
-  pdf
-  config
-  log
-}
-
-// Polimórfico (procedureId? / caseId?) por diseño ya aprobado en
-// DATABASE_DESIGN.md — Prisma no soporta CHECK nativo, se agrega
-// "num_nonnulls(procedure_id, case_id) = 1" a mano en la migración SQL (ver
-// nota de cabecera) y se valida también en el use case de subida.
-model Attachment {
-  id          String             @id @default(cuid())
-  procedureId String?
-  caseId      String?
-  fileType    AttachmentFileType
-  storageKey  String
-  uploadedBy  String
-  createdAt   DateTime           @default(now())
-
-  procedure Procedure?    @relation(fields: [procedureId], references: [id])
-  case      ResolvedCase? @relation(fields: [caseId], references: [id])
-  uploader  User          @relation("AttachmentUploadedBy", fields: [uploadedBy], references: [id])
-
-  @@index([procedureId])
-  @@index([caseId])
+  @@unique([userId, entityType, entityId])
+  @@index([userId, viewedAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -324,11 +219,11 @@ model Attachment {
 // completo (arquitectura, embeddings, chunking, prompt, retrieval, historial).
 //
 // Alcance de esta implementación: se indexa `Procedure` (al aprobarse, vía
-// `ProcedureVersion.contentMarkdown`) y `ResolvedCase` (al crearse). `Document`
-// queda deliberadamente fuera — su contenido es un archivo binario (PDF/
-// manual) sin texto extraído; indexarlo requiere un paso de extracción de
-// texto (OCR/parsing) que no forma parte de este pedido y se retoma cuando se
-// pida el caso de uso de análisis de archivos.
+// `ProcedureVersion.contentMarkdown`). `Document` queda deliberadamente
+// fuera — su contenido es un archivo binario (PDF/manual) sin texto
+// extraído; indexarlo requiere un paso de extracción de texto (OCR/parsing)
+// que no forma parte de este pedido y se retoma cuando se pida el caso de
+// uso de análisis de archivos.
 //
 // `embedding` usa `Unsupported(...)` porque Prisma no modela `vector`/
 // `halfvec` nativamente (D1). La columna real, su extensión (`CREATE
@@ -345,9 +240,11 @@ model Attachment {
 // `pgvector-semantic-search`: mismo recall, mitad de espacio de
 // almacenamiento/índice — refinamiento de implementación, no un cambio de
 // decisión arquitectónica.
+// Solo "procedure_version" desde que el módulo Cases (que aportaba
+// "resolved_case") se eliminó (2026-07-29). Union type por si se reintroduce
+// contenido de casos resueltos más adelante.
 enum DocumentChunkSourceType {
   procedure_version
-  resolved_case
 }
 
 model DocumentChunk {
@@ -362,12 +259,10 @@ model DocumentChunk {
   embedding  Unsupported("halfvec(1024)")?
   chunkIndex Int
   categoryId String?
-  clientId   String?
   createdAt  DateTime                      @default(now())
 
   @@index([sourceType, sourceId])
   @@index([categoryId])
-  @@index([clientId])
 }
 
 enum AIMessageRole {
@@ -396,9 +291,9 @@ model AIMessage {
   conversationId   String
   role             AIMessageRole
   content          String        @db.Text
-  // Array de { type: "procedure"|"resolved_case", sourceId, title } — null
-  // en mensajes role=user, obligatorio en mensajes role=assistant que citan
-  // contexto (invariante de trazabilidad, ver AI_RAG_DESIGN.md §4.3).
+  // Array de { type: "procedure_version"|"web", sourceId, title, url } —
+  // null en mensajes role=user, obligatorio en mensajes role=assistant que
+  // citan contexto (invariante de trazabilidad, ver AI_RAG_DESIGN.md §4.3).
   sourceReferences Json?
   createdAt        DateTime      @default(now())
 

@@ -2,7 +2,11 @@
 // cualquier SDK de IA (ARCHITECTURE.md §6). Ver docs/architecture/AI_RAG_DESIGN.md
 // para el diseño completo.
 
-export type DocumentChunkSourceType = "procedure_version" | "resolved_case";
+// "resolved_case" (Casos Resueltos) existió acá hasta que el módulo Cases
+// se eliminó por completo (2026-07-29, pedido del usuario — sin uso real).
+// Si alguna vez se reintroduce contenido de casos resueltos, este union type
+// es el punto de entrada para agregarlo de nuevo.
+export type DocumentChunkSourceType = "procedure_version";
 
 export interface DocumentChunk {
   id: string;
@@ -11,7 +15,6 @@ export interface DocumentChunk {
   content: string;
   chunkIndex: number;
   categoryId: string | null;
-  clientId: string | null;
 }
 
 // Chunk recuperado en una búsqueda, con su score de fusión (RRF, ver §5 del
@@ -22,42 +25,41 @@ export interface ScoredChunk extends DocumentChunk {
   score: number;
 }
 
-// ScoredChunk + metadata de la fuente (Procedure/ResolvedCase) resuelta por
-// SemanticSearchUseCase — VectorStore no conoce Knowledge/Cases, solo sabe
+// ScoredChunk + metadata de la fuente (Procedure) resuelta por
+// SemanticSearchUseCase — VectorStore no conoce Knowledge, solo sabe
 // de `document_chunks` (Ports & Adapters: el vector store no debe acoplarse
 // a los agregados que indexa).
 //
 // IMPORTANTE: `sourceId` (heredado de DocumentChunk) es el id de la fila
 // indexada — para sourceType="procedure_version" eso es el id de la
 // ProcedureVersion, NO el del Procedure. `entityId`/`entityUrl` son los que
-// hay que usar para citar/enlazar la entidad real (Procedure vía su slug,
-// ResolvedCase vía su id) — nunca `sourceId` para eso.
+// hay que usar para citar/enlazar la entidad real (Procedure vía su slug) —
+// nunca `sourceId` para eso.
 export interface RankedChunk extends ScoredChunk {
-  /** Identificador citable por el LLM, ej. "PROC-<procedureId>-v<n>" / "CASE-<id>" (AI_RAG_DESIGN.md §4.2). */
+  /** Identificador citable por el LLM, ej. "PROC-<procedureId>-v<n>" (AI_RAG_DESIGN.md §4.2). */
   citationTag: string;
   sourceTitle: string;
-  /** Id de la entidad citable (Procedure.id o ResolvedCase.id) — no confundir con `sourceId`. */
+  /** Id de la entidad citable (Procedure.id) — no confundir con `sourceId`. */
   entityId: string;
-  /** Ruta relativa a la app, ej. "/procedures/mi-slug" o "/cases/<id>". */
+  /** Ruta relativa a la app, ej. "/procedures/mi-slug". */
   entityUrl: string;
 }
 
 export interface SearchFilters {
   categoryId?: string;
-  clientId?: string;
 }
 
 export type AIMessageRole = "user" | "assistant";
 
 // "web" (AI_RAG_DESIGN.md — búsqueda externa, pedido explícito del usuario):
-// fuente NO verificada por ZeroQ, a diferencia de procedure_version/
-// resolved_case que vienen de contenido propio indexado. La UI debe
-// distinguirla visualmente (ver SOURCE_TYPE_LABELS en ai-ui.ts).
+// fuente NO verificada por ZeroQ, a diferencia de procedure_version que
+// viene de contenido propio indexado. La UI debe distinguirla visualmente
+// (ver SOURCE_TYPE_LABELS en ai-ui.ts).
 export type SourceReferenceType = DocumentChunkSourceType | "web";
 
 export interface SourceReference {
   type: SourceReferenceType;
-  /** Procedure.id/ResolvedCase.id para fuentes internas; la URL misma (clave única) para type="web". */
+  /** Procedure.id para fuentes internas; la URL misma (clave única) para type="web". */
   sourceId: string;
   title: string;
   /** Ruta relativa a la app para fuentes internas, o la URL externa completa para type="web". */
@@ -92,12 +94,11 @@ export interface AskAIStructuredAnswer {
   applicableProcedures: { sourceRef: string; title: string }[];
   commands: string[];
   warnings: string[];
-  similarCases: { sourceRef: string; title: string }[];
   /**
    * Fuentes web citadas — ya validadas contra los resultados reales
    * devueltos por la tool de búsqueda (nunca lo que el LLM "dice" que
    * encontró sin verificar, mismo criterio anti-alucinación que
-   * applicableProcedures/similarCases). Ver VercelAiLLMProvider.
+   * applicableProcedures). Ver VercelAiLLMProvider.
    */
   externalSources: { url: string; title: string }[];
   riskLevel: "low" | "medium" | "high" | null;
