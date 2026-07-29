@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "skills": {
+    "documentation": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/documentation/SKILL.md",
+      "computedHash": "43947d80ab634432362a076657eb225212760adbe731c0829a92709aeb842666"
+    },
+    "find-docs": {
+      "source": "upstash/context7",
+      "sourceType": "github",
+      "skillPath": "skills/find-docs/SKILL.md",
+      "computedHash": "c8db84386b8a81ccd2b315bd39fe4739ad9085db36e344e97bafd0e5301d7bc0"
+    },
+    "n8n-agents": {
+      "source": "czlonkowski/n8n-skills",
+      "sourceType": "github",
+      "skillPath": "skills/n8n-agents/SKILL.md",
+      "computedHash": "536b00cec3e2f9e122cd75e50e56ba90e8058027538d002c21f739fe28d25b0f"
+    },
+    "n8n-code-javascript": {
+      "source": "czlonkowski/n8n-skills",
+      "sourceType": "github",
+      "skillPath": "skills/n8n-code-javascript/SKILL.md",
+      "computedHash": "0fc21ecd6180fce3fc54cd2edfca1c63b0d8e8b49534ce4d2c609aeb1927f0d9"
+    },
+    "n8n-error-handling": {
+      "source": "czlonkowski/n8n-skills",
+      "sourceType": "github",
+      "skillPath": "skills/n8n-error-handling/SKILL.md",
+      "computedHash": "156b2f98bb1c7c9217aad8779707330767e019e54937f7d298d70d3f657e0486"
+    },
+    "n8n-self-hosting": {
+      "source": "czlonkowski/n8n-skills",
+      "sourceType": "github",
+      "skillPath": "skills/n8n-self-hosting/SKILL.md",
+      "computedHash": "3d160df2800788840590a053eb66bcf3f84526c03ec369f0b8eeaeb7cc71853b"
+    },
+    "n8n-workflow-patterns": {
+      "source": "czlonkowski/n8n-skills",
+      "sourceType": "github",
+      "skillPath": "skills/n8n-workflow-patterns/SKILL.md",
+      "computedHash": "01ce8f07d3054ea8d4ab40f884d37b8482a450dd94add0c2923c0ff7b124b9b9"
+    },
+    "pgvector-semantic-search": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/pgvector-semantic-search/SKILL.md",
+      "computedHash": "4f462624190efaee82f7b32d74c2ae46475a805c8e87ef090da6a7999c329723"
+    },
+    "postgresql-optimization": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/postgresql-optimization/SKILL.md",
+      "computedHash": "8022448de70ba9a485e3b5bce34c5bbc644f93eb39b68431c9f7dabcf03aeb09"
+    },
+    "prisma-cli": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "skillPath": "prisma-cli/SKILL.md",
+      "computedHash": "f41a5af7f25a686631a0e2a8b7031f3c57e0e06b81932f6389736d930d05fa54"
+    },
+    "prisma-client-api": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "skillPath": "prisma-client-api/SKILL.md",
+      "computedHash": "7825288518e0722b497de03367a1aee477fc61b0b488d456b9b6257294c005ae"
+    },
+    "prisma-database-setup": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "skillPath": "prisma-database-setup/SKILL.md",
+      "computedHash": "0911d9454bd48df3badd23a50fd90a280eabb15dcbd472c14e7b729075dadefb"
+    },
+    "react-frontend": {
+      "source": "iliaal/ai-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-frontend/SKILL.md",
+      "computedHash": "4e3bef1dfe7d9ba60a6dab02f6b03122215693ec481d2fc0d834d361eaa971a3"
+    },
+    "security-review": {
+      "source": "getsentry/skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-review/SKILL.md",
+      "computedHash": "1eee1e41aa0a0e75dbbe0cac387e3d61bedf51af1888f184301a173731e6973e"
+    },
+    "using-n8n-mcp-skills": {
+      "source": "czlonkowski/n8n-skills",
+      "sourceType": "github",
+      "skillPath": "skills/using-n8n-mcp-skills/SKILL.md",
+      "computedHash": "cef5341f9ff5e0c63c553c822e771f0d598f7dd51e78f4002b17b2d885251a60"
+    }
+  }
+}

@@ -1,0 +1,1261 @@
+Desfase horario
+
+-panther@panther:~$ date (Se comprueba el problema)
+-panther@panther:~$ sudo date -s "2020-11-03 10:00" (Se modifica con superusuario,  ingresamos el año-mes-día y la hora)
+-panther@panther:~$ sudo hwclock -w (Se modifica hora en la BIOS)
+
+Comprobación:
+date
+sudo hwclock -w
+--------------------------
+Para bajar y subir servicios.
+
+./run.sh
+--------------------------
+Revisar logs o eventos
+
+docker logs zeroq -f
+------------------------------------
+Equipo no imprime, pero si ejecuta el ticket (Desconfiguración de kernel)
+
+-cd /dev/usb
+-ls -la (donde está asignada la impresora)
+-udevadm info -a /dev/usb/lp0 (Ver el kernel que corresponda, lo único que cambia en este caso es lp0, el último número puede cambiar).
+-sudo nano /etc/udev/rules.d/90-printer.rules (para revisar el kernel)
+-zq printer (Impresión de prueba)
+--------------------------------------
+Cambio de mensaje en ticket
+
+-Dentro del tótem:
+cd local (nos moveremos a directorio local)
+sudo nano .env (ingresamos al directorio.env)
+
+-Al final del directorio, se agregará lo siguiente.
+
+No hagas fila,
+PRINTER_PAPER_WIDTH = "70mm" (Ancho del papel)
+ADDITIONAL_MESSAGE="_" (Deja un mensaje por encima del slogan)
+URL="reserva.servipag.com" (Direccion URL)
+#SLOGAN="" (Deja un comentario por encima de la URL)
+ctrl+x
+y
+enter
+(Podemos usar editor a eleccion nano, vi, vim, etc.)
+
+-Reiniciamos el servicio de impresión:
+./run.sh
+
+Si eso no sirve, reboot.
+
+-----------------------------------------------------------------
+Cambio de logo
+
+- cd local/assets
+- ls -la (validar archivos del directorio)
+- sudo rm mini_logo.png
+- sudo wget zeroq.cl/support/files/soporte/videos/servipag/mini_logo.png (ejemplo, descargamos logo "servipag")
+- cd ..
+- Reiniciamos el servicio de impresión
+docker-compose stop printer
+docker-compose up -d printer
+------------------------------------------------------------------
+Carga de video
+
+-cd local
+-cd assets/videos (ingresamos al directorio videos, pasando por assents)
+- sudo rm video.mp4
+- sudo wget zeroq.cl/support/files/soporte/videos/carpetacreadaendeploy/video.mp4(Descarga de video de ejemplo)
+-------------------------------------------------------------------
+Extraer data de tótem:
+cd local
+docker exec -it postgres psql -U postgres
+
+Ingresamos comandos para extracción de data
+\copy (select * from "Calls" where inserted_at::date between '2026-06-16' and '2026-06-16') to 'calls.csv' with delimiter ';' csv header;
+
+\copy (select * from "Tickets" where inserted_at::date between '2026-06-16' and '2026-06-16') to 'tickets.csv' with delimiter ';' csv header;
+
+\copy (select * from "Tickets" where inserted_at::date between '2026-05-01' and '2026-06-01') to 'tickets.csv' with delimiter ';' csv header;
+
+\copy (select * from "Calls" where inserted_at::date between '2026-05-01' and '2026-06-01') to 'calls.csv' with delimiter ';' csv header;
+
+\copy (select * from "ModuloStates" where inserted_at::date between '2025-09-01' and '2025-09-30') to 'mstates.csv' with delimiter ';' csv header;
+
+\copy (select * from "Reserves" where inserted_at::date between '2025-09-01' and '2025-09-30') to 'reserves.csv' with delimiter ';' csv header;
+
+
+
+\copy (select * from "Calls" where inserted_at >= '2025-09-27') to 'calls.csv' with delimiter ';' csv header;
+\copy (select * from "Tickets" where inserted_at >= '2019-06-01') to 'tickets.csv' with
+delimiter ';' csv header;
+\copy (select * from "ModuloStates" where inserted_at >= '2019-06-01') to 'mstates.csv'
+with delimiter ';' csv header;
+\copy (select * from "Reserves" where inserted_at >= '2025-07-09') to 'reserves.csv' with delimiter ';' csv header;
+
+
+\copy (select * from "StateModulos") to 'mstates.csv' with delimiter ';' csv header;
+
+\q
+
+Ahora debemos llevar la data a la máquina local
+docker ps (Ver identificadores de postgres)
+
+Buscamos este en específico y copiamos el id:
+docker.zeroq.cl/postgres:alpine,
+
+Lista de dockers: (copiamos el id, donde dice contenedor_id)
+docker cp bc02533bb9d7:/calls.csv .
+docker cp bc02533bb9d7:/tickets.csv .
+docker cp <527467667ddc>:/mstates.csv .
+docker cp <527467667ddc>:/reserves.csv .
+
+Lista de dockers: (copiamos el id, donde dice contenedor_id)
+docker cp 93caa1498e9c:/calls.csv .
+docker cp 93caa1498e9c:/tickets.csv .
+docker cp 99a3f9a6aedb:/mstates.csv .
+docker cp 99a3f9a6aedb:/reserves.csv .
+
+
+Buscamos este en específico y copiamos el id
+docker.zeroq.cl/postgres:alpine,
+
+Comprimimos archivo
+tar -czf data.tar.gz *.csv
+
+Copiamos
+mv -v data.tar.gz /media/<nombre del usb>
+---------------------------------
+acceder por deploy
+
+ssh deploy@support.zeroq.cl
+---------------------------------
+Si el tiempo de espera entre un ticket y otro es muy extenso o Caen muchos ticket seguidos:
+
+-	Ingresamos al control de mando y buscamos la sucursal.
+-	configuración > Asignaciones > Programas configurados > dar clic en el ojo > Desmarcar todo y volver a marcar.
+-	Reiniciar los servicios del Tótem (./run.sh).
+Si lo realizado no funciona, agregar:
+-	Eliminar caché del módulo o PC.
+--------------------------------------
+Sí fila se muestra como inactiva en tótem
+-cd local
+-zq electron restart (Reinicia el servicio de interfaz)
+----------------------------------------
+Para ingresar a display a través de un túnel.
+1)	Ingresar desde pantalla cli de windows
+C:\Users\Zeroq>ssh deploy@support.zeroq.cl -L 3131:localhost:3131
+
+2)	Si es deploy, ingresar por el puerto correspondiente a la red
+ssh -p 115 panther@201.187.109.13 -L 3131:localhost:3030
+
+3)	Ingresar desde pantalla cli de windows
+ssh -p 22000 panther@iptotem -L 3131:localhost:3131
+ssh -p 22000 panther@iptotem -L 3030:localhost:3030
+-----------------------------------------------------------------
+Cambio de rutificador dentalink
+cd local
+sudo vim docker-compose.yml
+rut:
+ environment:
+     - ID_SUCURSAL=1403
+  container......
+  image:............dentalink
+restart.......
+sudo vim ~/.config/zeroq/docker-compose/docker-compose.yml
+rut:
+ environment:
+     - ID_SUCURSAL=1403
+  container......
+  image:............dentalink
+restart.......
+
+docker-compose up --force-recreate --build -d rut
+esperar que termine su proceso
+docker-compose pull
+docker-compose down
+docker-compose up -d
+-----------------------
+Buscar la ruta de acceso para un archivo
+
+sudo find / -name '*nombre que buscas*', y encontrarás la ruta exacto
+---------------------------
+Error de redis pegado
+
+-cd local
+-docker-compose down
+-docker volume rm local_rddata
+-docker-compose up -d
+
+-docker logs zeroq -f
+
+
+
+---------------------------------------------
+
+Paso 1 instalación de antivirus y demonio
+
+sudo apt-get install clamav clamav-daemon -y
+
+Activar demonio: sudo /etc/init.d/clamav-daemon start
+
+Activar Firmas: sudo /etc/init.d/clamav-freshclam start
+
+Comprobación de demonio: sudo /etc/init.d/clamav-daemon status  *al estar activado debe decir "active (running)" en color verde*
+
+comprobación de firmas: sudo /etc/init.d/clamav-freshclam status  *al estar activado debe decir "active (running)" en color verde*
+
+
+Paso 2 - Rkhunter
+
+sudo apt-get install rkhunter
+Listo.
+—--------------------------------------------------------------
+Pasos para validar la conexión al broker
+1.- docker ps
+2.- docker exec -it (id-de-la-imagen) sh
+3.- node
+4.- Script
+const amqp = require('amqplib/callback_api');
+const connectToServer = () => {
+  amqp.connect('amqp://zeroq:zeroq@52.224.17.51:5672/', function (error0, connection) {
+    if (connection) {
+      console.log("Connection success")
+    }
+    if (error0) {
+      throw error0;
+    }
+  })
+}
+
+connectToServer()
+
+Ó
+
+const connectToServer = () => {
+  amqp.connect('amqp://zeroq:zeroq@52.224.17.51:5672/', function (error0, connection) {
+    if (connection) {
+      console.log("Connection success")
+    }
+    if (error0) {
+      throw error0; }
+  })
+}
+connectToServer()
+
+
+5.- en consola nc -zv 52.224.17.51 5672
+----------------------------------------------------------
+Ingreso y filtrado de filas en postgres
+
+docker exec -it postgres psql -U postgres
+
+select * from "Calls" where prefix='F' and inserted_at>='2025-07-09' order by inserted_at asc;
+select * from "Calls" where prefix='DM13' and inserted_at>='2024-04-23' order by inserted_at asc;
+select * from "Calls" and inserted_at>='2024-03-01' order by inserted_at asc;
+select * from "Calls" where prefix='F' and inserted_at>='2025-06-04' order by inserted_at asc;
+select * from "Calls" where prefix='CF' and inserted_at>='2022-04-14' order by inserted_at asc;
+select * from "Tickets" where prefix='CF' and inserted_at>='2022-05-11' order by inserted_at asc;
+select * from "Calls" where prefix='CF' and inserted_at>='2022-05-11' order by inserted_at asc;
+select * from "Calls" where inserted_at>='2024-06-12' order by inserted_at asc;
+select * from "Calls" where prefix='V' and inserted_at>='2023-03-13' order by inserted_at asc;
+select * from "Calls" where tuid ='T18101472261663165692483' and inserted_at>='2022-09-14' order by inserted_at asc;
+
+----------------------------------------------------------
+Actualización de Redis
+
+cd local
+sudo vim .env
+	REDIS_PASSWORD = "panther"
+
+sudo vim docker-compose.yml
+	docker.zeroq.cl/redis:password
+
+docker-compose down && docker volume rm local_rddata
+docker-compose pull && docker-compose up -d
+
+docker logs redis
+	verificar que esté en 6.0.5
+docker logs zeroq -f
+	Verificar que no haya error relacionado con redis
+curl -s localhost:3030/api/v1/lines | jq .
+	Revisar que levante botonera en api
+
+------------------------------------------------------
+
+Descargas de logs o archivos.
+
+-	cd local
+-	docker logs zeroq  > prueba1.txt
+-	scp -P 22000 panther@<IPtotem>:~/local/<nombredearchivo> .
+
+En consola windows
+
+-	cd Documents
+-	scp -P 22000 panther@<IPtotem>:~/local/<nombredearchivo> .
+
+Para descargar desde deploy
+
+
+
+-----------------------------------------------------
+
+Para modificar tamaño de pantalla.
+
+desde usuario zeroq
+
+mkdir -p /home/zeroq/.config/lxsession/LXDE
+
+luego
+
+nano /home/zeroq/.config/lxsession/LXDE
+
+ingresas el texto
+
+xrandr -s 1366x768 (validar la máxima resolución y cambiar si es necesario)
+
+guardar y reiniciar
+se debe realizar esto
+
+#/bin/bash
+mkdir /home/zeroq/.config/autostart
+
+cat << EOF >  /home/zeroq/.config/autostart/script.sh
+
+#!/bin/bash
+xrandr -s 1366x768
+EOF
+
+cat << EOF > /home/zeroq/.config/autostart/xr.desktop
+  [Desktop Entry]
+  Name=script.sh
+  Exec=/home/zeroq/.config/autostart/script.sh
+  Type=Application
+  Terminal=false
+EOF
+-----------------------------------------------------------
+Configuración de ficheros proxy.
+
+desde la raíz
+proxys 1 : sudo vim /etc/default/docker
+
+# This file is managed by Puppet and local changes
+# may be overwritten
+
+#no_proxy=localhost,127.0.0.0/8,*.local
+#NO_PROXY=localhost,127.0.0.0/8,*.local
+
+HTTP_PROXY=http://totem0q:Servipag2015@192.168.53.11:9090
+HTTP_PROXY=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+HTTPS_PROXY=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+
+OPTIONS=" -H unix:///var/run/docker.sock --ip-forward=true --iptables=true --ip-masq=true"
+
+
+# This is also a handy place to tweak where Docker's temporary files go.
+# TMPDIR="/tmp/"
+
+proxys 2: sudo vim /etc/environment
+proxys 3: comentar los proxys de docker-compose.yml y el de respaldo
+proxy 4: cd /etc/profile.d/ (cambiar el nombre de ip_proxy.sh
+
+----------------------------------------------------------------
+Para revisar postgres
+
+docker exec -it postgres psql -U postgres
+
+select prefix, number, generation FROM "Tickets" ORDER BY inserted_at DESC LIMIT 100;
+select prefix, number, inserted_at FROM "Calls" ORDER BY inserted_at DESC LIMIT 100;
+
+
+--------------------------------------------------------------
+
+Cambio de hora.
+Si aparece el mensaje al realizar pull:
+Pulling redis (docker.zeroq.cl/redis:alpine)...
+ERROR: Get https://docker.zeroq.cl/v1/_ping: x509: certificate has expired or is not yet valid
+
+revisar la hora, cambiarla con
+
+sudo date -s "año-mes-dia hora:minutos"
+sudo hwclock -w
+
+docker-compose down
+docker-compose pull
+docker-compose up -d
+-----------------------------------------------------------------
+
+Cambio de zona horaria
+
+date (Ejemplo si equipo está en -4)
+sudo timedatectl set-timezone America/Santiago (Ejemplo cambiar zona horaria a -3)
+date (Comprobar)
+sudo date -s "año-mes-dia hora:minutos (Modificar si es necesario)
+sudo hwclock -w (Modificar para bios)
+timedatectl (comprobar)
+
+------------------------------------------------------------------
+
+Recomendaciones para parlantes.
+
+instalación de parlantes se recomienda cable de entrada de audio con conector plug de 3,5 mm
+
+-------------------------------------------------------------------
+
+Módulos no reciben tickets y se marca warn en logs
+
+Se deben ingresar los siguientes comandos,
+
+docker-compose down (bajar servicios)
+
+Solicitar pateó a sucursal (una vez esté pateada)
+docker-compose up -d (subir los servicios)
+
+●	Si lo anterior no sirve, limpiar Caché de los pc.
+
+------------------------------------------------------------------------
+
+#descargar archivos#
+
+Luego descargar desde cmd saliendo de la maquina
+Luego descargar docker logs -t zeroq > logsnombre.log
+
+
+#Copiar a Apoquindo#
+
+scp -P 22000 /home/panther/local/log-redis-valdivia2.txt  panther@10.220.52.235:/home/panther/local
+
+scp -P 22000 /var/lib/docker/containers/beed75454642c877cbab54742e348b3ea89e7fe6350aca348f1b0030f2836f58/beed75454642c877cbab54742e348b3ea89e7fe6350aca348f1b0030f2836f58-json.log  panther@10.220.52.235:/home/panther/local
+
+/var/lib/docker/containers/beed75454642c877cbab54742e348b3ea89e7fe6350aca348f1b0030f2836f58/beed75454642c877cbab54742e348b3ea89e7fe6350aca348f1b0030f2836f58-json.log
+
+#descargar desde cmd administrador a carpeta windows#
+.\pscp.exe -P 22000 panther@172.23.169.22:/home/panther/local/providencia06-11.txt C:\Users\fnahuelan\Documents\logs
+
+pscp.exe -P 22000 panther@10.63.123.17:/home/panther/local/23abril.txt C:\Users\Zeroq\Documents\Logs
+
+
+beed75454642c877cbab54742e348b3ea89e7fe6350aca348f1b0030f2836f58/beed75454642c877cbab54742e348b3ea89e7fe6350aca348f1b0030f2836f58-json.log
+
+scp -P 22 apoquindo05-06.txt  support@:/home/deploy/static/files/soporte/videos/zurich/ .
+
+
+----------------------------------------------------------------------
+Cambio de zona horaria a la antigua
+
+1- sudo dpkg-reconfigure tzdata
+2- sudo date -s "2021-04-07 15:55"
+3- sudo hwclock -w
+
+---------------------------------------------------------------------
+
+SOLUCIÓN A LIGHT LOCKER
+
+Para Puerto Montt
+Crear archivo: sudo nano /etc/X11/xorg.conf
+
+escribir las siguientes lineas de texto dentro del archivo:
+
+Section "ServerFlags"
+
+Option "blank time" "0"
+Option "standby time" "0"
+Option
+"suspend time" "0"
+Option "off time" "0"
+
+EndSection
+
+Guardar
+
+--------------------------------------------------------------------
+
+Saltarse inicio de sesión
+
+sudo chmod +x .Xauthority
+
+----------------------------------------------------------------------
+Cobros sin garantía
+
+1.55 en Santiago
+1.95 en Regiones
+
+-------------------------------------------------------------------------
+
+Ver reservas guardadas en tótem
+
+docker-compose exec redis /bin/sh
+redis-cli auth panther
+-----------------------------------------------------------------------
+
+Usar cuando sucursal no tome el retag
+
+docker-compose up -d --force-recreate
+
+---------------------------------------------------------
+
+QUITAR COMPROBACIÓN DE ACTUALIZACIONES
+
+sudo vim /etc/update-manager/release-upgrades
+
+cambiar Prompt=lts a Prompt=never
+
+---------------------------------------------------------
+
+EXTRAER ARCHIVOS DE TÓTEM A TOTEM
+docker logs -t rut 2> logsnombre.log
+
+posicionarse en la ruta de donde quiero descargar el archivo luego
+
+scp -P 22000 panther@10.237.8.210:~/local/assets/local/mini_logo.png .  <-------OJO, COLOCAR ESPACIO PUNTO
+
+ scp -P 22000 archivo.formato panther@Ipdetotem:~/local/assets/
+
+scp -P 22 apoquindo05-06.txt  support@20.2.0.5:/home/deploy/static/files/soporte/videos/zurich/ .
+
+
+-----------------------------------------------------------
+
+Solucion n° 1 a resolución (Consorcio)
+
+desde usuario zeroq
+mkdir -p /home/zeroq/.config/lxsession/LXDE
+luego
+nano /home/zeroq/.config/lxsession/LXDE
+ingresas el texto
+xrandr -s 1366x768 (validar la máxima resolución y cambiar si es necesario)
+guardar y reiniciar
+
+--------------------------------------------------------------
+
+Reinicio de servicios en SVP
+
+docker-compose down
+bash --login
+docker-compose up -d
+
+---------------------------------------------------------------
+docker exec -it postgres psql -U postgres
+
+select count(*) from "Tickets";
+Independencia 9516
+Franklin 22540
+Agustinas  66008
+Peñaflor  26590
+
+select count(*) from "Tickets" where inserted_at::date >= '2021-06-01'::date;
+
+delete from "Tickets" where inserted_at::date <= '2021-06-01'::date;
+
+
+begin transaction;
+
+docker exec -it postgres psql -U postgres
+delete from "Tickets" where inserted_at::date <= '2021-06-01'::date;
+select count(*) from "Tickets";
+
+-----------------------------------------------------
+Por siniestros en Starken (Sucursales Aseguradas)
+
+-	Gasto por visita está incluido en seguro
+-----------------------------------------------------
+
+Agregar crontab de reinicio de servicios
+
+-	sudo su (Ingresar como root)
+-	vim /etc/crontab (Ingresar a configuracion de crontab)
+-	10 7 * * * /home/panther/local/run.sh >> /home/panther/crontab-run-programmed.sh.log 2>&1 (Agregar regla al final, esto nos indica que todos los días a las 7:10 se realizará un reinicio de servicios y estos irán como logs en la raíz
+-------------------------------------------------------
+Actualizar Certificados
+
+Get https://docker.zeroq.cl/v1/_ping: x509: certificate signed by unknown authority
+
+Paso 1. openssl s_client -showcerts -connect docker.zeroq.cl:443 < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/ , /-END CERTIFICATE-/p' > ca.crt
+
+Paso 2. sudo cp ca.crt /usr/local/share/ca-certificates/
+
+Paso 3. sudo update-ca-certificates
+
+paso 4. sudo systemctl restart docker
+
+-----------------------------------------------------------------------------
+
+Proxys servipag
+
+cat /etc/environment
+
+no_proxy=localhost,127.0.0.0/8,*.local
+NO_PROXY=localhost,127.0.0.0/8,*.local
+all_proxy=socks://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+ALL_PROXY=socks://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+http_proxy=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+HTTP_PROXY=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+ftp_proxy=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+FTP_PROXY=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+https_proxy=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+HTTPS_PROXY=http://totem0q:Servipag2015@wwwinternet.servipag.corp:9090/
+
+
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games"
+
+////////////////////////////////////////////////////////////////////
+
+environment:
+      - HTTPS_PROXY=http://totem0q:Servipag2015@${IP_PROXY}:9090/
+      - HTTP_PROXY=http://totem0q:Servipag2015@${IP_PROXY}:9090/
+
+///////////////////////////////////////////////////////////////////////
+----------------------------------
+Cambio de Datos de red
+
+nmcli con (Ver ID tarjeta de red)
+nmcli con mod abb0b26d-dbdb-43cb-a816-0785b1417c5b ipv4.method manual
+nmcli con mod abb0b26d-dbdb-43cb-a816-0785b1417c5b ipv4.address 192.168.41.248/24
+nmcli con mod abb0b26d-dbdb-43cb-a816-0785b1417c5b ipv4.gateway 192.168.41.254
+nmcli con mod 7a4eb165-94d8-37f0-b0f6-be1de1de7ce3 ipv4.dns 8.8.8.8,200.75.0.4
+nmcli con up 7a4eb165-94d8-37f0-b0f6-be1de1de7ce3
+
+
+sudo reboot
+
+Comprobacion
+nmcli dev show | grep DNS
+ifconfig
+netstat -r
+--------------------------------------------------------
+
+#!/bin/sh
+
+xrandr --output VIRTUAL1 --off --output DP2 --mode 1280x1024 --pos 0x0 --rotate left --output DP1 --off --output HDMI3 --off$
+xinput set-prop '9' 'Coordinate Transformation Matrix' 1, 0, 0, 0, 1.0, 0.0, 0, 0, 1
+xinput set-prop '9' 'Evdev Axis Inversion' 1, 0
+xinput set-prop '9' 'Evdev Axes Swap' 1
+
+xinput set-prop '10' 'Coordinate Transformation Matrix' 1, 0, 0, 0, 1.0, 0.0, 0, 0, 1
+xinput set-prop '10' 'Evdev Axis Inversion' 1, 0
+xinput set-prop '10' 'Evdev Axes Swap' 1
+
+----------------------------------------------------------
+
+XINPUT CALIBRATOR
+
+sudo apt install xinput-calibrator
+
+calibrar
+
+ingresar a
+
+cd /etc/X11/
+
+crear la carpeta
+
+mkdir xorg.conf.d
+
+crear el archivo
+
+sudo nano 99-calibration.conf
+
+guardar lo que entrega el xinput-calibrator.
+
+Section "InputClass"
+        Identifier      "calibration"
+        MatchProduct    "ILITEK ILITEK-TP"
+        Option  "Calibration"   "16334 -10 9436 95"
+        Option  "SwapAxes"      "0"
+EndSection
+
+-------------------------------------------------------------------
+
+curl localhost:3030/api/v1/state | jq .summary
+
+-------------------------------------------------------------------
+
+paso 1: docker-compose down --remove-orphans
+paso 2: docker-compose up -d
+
+Si se sigue mostrando la falla:
+Paso 1: docker container ls -a
+Paso 2: docker stop idcopiado && docker rm idcopiado
+--------------------------------------------------------------------
+curl a tótem maestro
+
+curl ipmaestro:3030/api/v1/state
+
+—---------------------------------------------------------------------
+Estado de los módulos
+
+curl localhost:3030/api/v1/state/ | jq .modulos.registry
+docker logs zeroq -f | grep …..
+
+—----------------------------------------------------------------------
+Cambio de hora sin que sincronice (Solo para pruebas)
+
+- systemctl stop systemd-timesyncd.service
+- timedatectl set-ntp false
+- date -s "año-mes-dia hora:min:seg"
+
+Para dejar la hora operativa nuevamente.
+
+- systemctl start systemd-timesyncd.service
+- timedatectl set-ntp true
+- date -s "año-mes-dia hora:min:seg"
+
+—-------------------------------------
+EIMINAR CONTENEDOR Allocated
+
+docker container ls -a
+docker stop ID && docker rm ID
+Aplicar y reiniciar el tótem sin reiniciar los servicios.
+—-------------------------------------
+Asignacion sin llamar, genera loop de llamado en logs
+
+cd local
+
+docker exec -it postgres psql -U postgres  (Ingresar a la base de datos postgres)
+
+update "Calls"  set attending =false where  tuid ='T2293244081751994330794'; (Actualizar el ticket que quedo pegado)
+
+PAULINA MARIA ARRAU MUNIZAGA
+—--------------------------------------
+Recomendaciones para planchón de metal
+
+Si hay vulcanita y luego planchón de metal, se debe utilizar un tornillo autoperforante. Va en kit de instalación
+
+—-------------------------------------
+Error redis
+
+cd local
+docker-compose stop redis
+docker-compose up -d redis
+—------------------------------------------
+Revisar el echo state de la sucursal
+
+https://zeroq.cl/echo-state/
+
+—------------------------------------------
+Error Payload en logs.
+
+log: warn: [callStarted] validation error on payload:
+cd local
+./run.sh
+
+**Si no se solventa con reinicio de servicios. Solicitar a los ejecutivos que se salgan del módulo y borren caché.
+
+—------------------------------------------
+Instalación de Electron.
+
+cd .local
+
+mkdir bin
+
+cd bin
+
+wget 40.121.159.185/files/zq/zq
+
+sudo chmod +x zq
+—------------------------------------------
+Ver conexión a maestro.
+
+curl IPMAESTRO:3030/api/v1/state
+
+—---------------------------------------
+
+Recomendación para orificios en vulcanita
+
+—---------------------------------------------------------------
+
+Abrir pantallas con segmentación
+
+IPTOTEM:3030/display/#/?SLUG
+
+—--------------------------------------------------------------
+Guardar los logs
+docker logs zeroq > prueba.log
+
+Desde providencia
+scp -P 22000 panther@172.23.75.196:~/local/prueba.log .
+
+Desde cmd de windows
+pscp.exe -P 22000 panther@172.23.169.22:/home/panther/local/prueba.log C:\Users\Zeroq\Documents\Logs
+
+—-----------------------------------------------
+Buscar Call id con el Ticket id
+
+docker exec -it postgres psql -U postgres
+
+select * from "Reserves" where ruid ='R40103766738' and inserted_at>='2025-07-09' order by inserted_at asc;
+
+select * from "Calls" where tuid ='T21451789651694630982539' and inserted_at>='2023-09-13' order by inserted_at asc;
+
+select * from "Calls" where tuid ='T84581686121694004494742' and inserted_at>='2022-09-14' order by inserted_at asc;
+—-----------------------------------------------
+Buscar tickets por fecha
+
+docker exec -it postgres psql -U postgres
+
+select * from "Tickets" where inserted_at>='2024-03-01' order by inserted_at asc;
+select * from "Calls" where inserted_at>='2024-04-23' order by inserted_at asc;
+select * from "Reserves" where inserted_at>='2025-07-09' order by inserted_at asc;
+
+—-----------------------------------------------------
+Instalar teamviewer tótem linux
+
+wget https://download.teamviewer.com/download/linux/teamviewer_amd64.deb
+
+sudo apt install ./teamviewer_amd64.deb
+—------------------------------------------------------
+configuración de red trademedia
+
+f9 para acceder a la configuración de red
+
+Ip: 172.32.16.45 (Ingresamos IP que nos indique el cliente)
+Máscara: 255.255.255.248 (No va con prefijo)
+DNS:190.90.1.90 (Solo agregamos un DNS)
+Puerta de enlace: 172.32.16.33 (Ingresamos la GW que nos comparte cliente)
+
+Dar a configurar y presionamos f8 para hacer el test de conexión
+
+—---------------------------------------------------------
+Si quieren activar el browser propio de tvbox
+
+Droid settings-->more settings-->apps-->webview shell
+—---------------------------------------------------------
+Deshabilitar historial de comandos de linux
+
+desde home
+cd /etc/bash.bashrc
+Dentro del fichero ~/.bashrc buscaremos las variables HISTSIZE y HISTFILESIZE. En mi caso son las siguientes:
+
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+Desactivar el historial de comandos history
+Si una vez borrado el historial lo quisiéramos desactivar lo podríamos hacer del siguiente modo:
+
+Inicialmente accederíamos al archivo de configuración ejecutando el siguiente comando:
+
+nano ~/.bashrc
+Justo al final del archivo introduciríamos el siguiente comando:
+
+unset HISTFILE
+Borrar historial:  history -c
+
+—------------------------------------------------------------
+
+Instalación de servicio SSH
+
+sudo apt install openssh-server (Instalación)
+
+sudo systemctl status ssh (Comprobación de estado de ssh)
+
+sudo systemctl enable ssh (Habilitación de los permisos)
+sudo systemctl start ssh (Habilitación de los permisos)
+
+sudo nano /etc/ssh/sshd_config (Cambio de puerto, de 22 a 22000)
+
+sudo systemctl restart ssh.service
+
+—-----------------------------------------------------------
+
+Sistema de audio para TVBOX
+
+Si la TV contiene cartelería digital o magix. no tendrán salida de audio, necesitando de un componente externo.
+
+Se debe conectar el TVBOX a una salida de audio.
+
+—-----------------------------------------------
+No actualiza la hora y fecha, quedando con 2016
+
+sudo vim /etc/ntp.conf
+comentar todo
+
+sudo reboot
+
+Comprob
+—-----------------------------------------------
+Solicitud de acceso remoto.
+
+Forwardeo de puerto
+22000 TCP para protocolo SSHv2 a la IP Pública 168.61.32.110
+168.61.32.110===22000===IPTÓTEM
+
+Otra opción es solicitar una cuenta de VPN SSL para conectarnos vía SSH a tótem.
+
+—------------------------------------------------
+
+Recomendaciones para instalación de transformador y botón de reinicio.
+
+1 En el caso de que totem no encienda, nivel 2 puede validar con el ejecutivo si el transformador tiene corriente con la luz piloto verde.
+
+2 El transformador no queda colgando generando el desprendimiento del interruptor.
+
+—----------------------------------------------------------------------------
+
+Recomendación para instalación de tótem
+
+El tarugo puede cortarse en la punta. Así se evita el corte del perno.
+
+—-------------------------------------------------
+
+Actualizar trademedia, validar si luego de esto tiene audio.
+
+Control + Alt + F1 para desplegar la consola
+
+Se debe ingresar el usuario y contraseña:
+User: mixxer
+Contraseña: Mixxer.2016
+
+Una vez ingresado en la consola se deben actualizar los servicios realizado un
+"sudo apt-get upgrade"
+
+Una vez actualizado
+"sudo reboot"
+
+—-------------------------------------------------
+
+Configurar Servidor NTP SHOA u otro NTP compartido por cliente
+
+sudo vim /etc/systemd/timesyncd.conf
+
+NTP=ntp.shoa.cl
+
+sudo systemctl restart systemd-timesyncd.service
+sudo systemctl status systemd-timesyncd.service
+
+—----------------------------------------------------------
+
+Descarga de evidencias en kaspersky.
+
+Obtener informe COLLECT de la máquina afectada según las siguientes instrucciones:
+
+a) Descarga el archivo -
+
+https://box.kaspersky.com/f/00a1a6d8beb24554a72d/?dl=1
+
+b) Copie el archivo al servidor afectado.
+
+c) Descomprima el archivo (# tar zxvf collect.tar.gz)
+
+d) Ejecute el script (# ./collect.sh). Debe ejecutar el script como "root".
+
+e) Recopilar, comprimir en un archivo protegido por contraseña: "clean" y enviar el resultado encontrado en la carpeta / tmp (collect.tar.gz)
+
+Cómo recopilar información de diagnóstico básica de una computadora usando el script collect.sh:
+https://support.kaspersky.com/collect
+—----------------------------------------------------------------------
+Modificar hora y que no se sincronice
+
+systemctl stop systemd-timesyncd.service (Parar el servicio de sincronizacion)
+
+timedatectl set-ntp false (Parar el servicio NTP)
+
+date -s "año-mes-dia hora:min:seg"
+
+—-------------------------------------------------------------------------
+Onstreet CLA
+
+Limache, Tocopilla, Ancud, Cauquenes, San Carlos y Los Vilos
+
+—--------------------------------------------------------------------------
+Revisar si rut está logueado en tótem.
+
+curl ip:port/api/v2/identify/:rut
+curl 10.10.0.171:3030/api/v2/identify/11.366.189-5
+curl 192.168.15.34:3030/api/v2/identify/19.952.695-2
+
+—-------------------------------------------------------------------------
+Segmentación para Rutificador Redsalud
+
+1 y 2: Solo adultos mayores
+3: Agendamiento, tiene vencimiento. Al terminar pasa a 4
+4: Público en General
+General: Pacientes que no están en su base de datos
+
+—------------------------------------------------------------------------
+Tótem hardenizado
+
+Reinicio de servicios
+su root
+cd
+cd local
+./run.sh
+
+—-----------------------------------------------------------------------
+Liberación de módulo con rut ya ingresado.
+
+Comprobación
+curl https://172.26.188.3/api/v2/modulos/available --insecure
+
+Terminar atención pendiente.
+curl --location 'https://172.26.188.3/api/v2/attentions' \
+> --header 'Content-Type: application/json' \
+> --data '{
+>     "cuid": "C169973441158821700488065165",
+>     "finishType": "normal"
+> }' --insecure
+
+Sacar el módulo pegado
+curl -X DELETE https://172.26.188.3/api/v2/modulos/16997/session --insecure
+
+Comprobación
+curl https://172.26.188.3/api/v2/modulos/available --insecure
+—------------------------------------------------
+Falla con imagen de redsalud redsalud-regiones con placa nueva
+
+Equipo no levanta los servicios, tótem se ve en blanco
+
+docker-compose down (bajamos el servicio)
+
+docker-compose down -v (Importante!!: antes de realizar este procedimiento hay que respaldar postgres y avisar a cliente que vamos a tener que borrar las atenciones del día)
+
+Validamos que se sigue mostrando los mismos logs luego de lo aplicado.
+
+cambiamos el tag a zeroq-stable en docker-compose.yml y update.sh, aplicamos actualización
+docker-compose pull backend
+
+./run.sh
+
+Validamos logs nuevamente y nos muestra que la sucursal logra su conectividad.
+
+—------------------------------
+Rescatar data de reservas postgres
+
+docker exec -it postgres psql -U postgres -d postgres -c "COPY (SELECT * FROM "Calls" WHERE inserted_at >= to_date('20240221','YYYYMMDD') AND inserted_at <= to_date('20240221','YYYYMMDD') AND ruid IS NOT NULL ORDER BY inserted_at DESC) TO STDOUT WITH CSV HEADER" > /home/panther/file.csv
+
+—--------------------------------
+Servipag no conecta a la API.
+
+modificar el .env
+
+API = "ws://servipag.zeroq.cl/socket"
+REST_API = "https://zeroq.cl/api/v1"
+AUTH_API = "http://servipag.zeroq.cl/login/office"
+
+Dejar proxys.
+—--------------------------------------
+Medidas y peso de despacho tótem
+- alto 46,5
+- largo 44
+- ancho 35,5
+—---------------------------------------
+Liberación de rut tomado, por postgres. Es un procedimiento delicado, consultar con informática si hay dudas
+
+docker exec -it postgres psql -U postgres (Ingresamos a postgres)
+
+select * from "SessionModulos"; (Buscamos la fecha desde cuando se quedó pegado el rut)
+
+delete from "SessionModulos" where modulo_id=28329; (28329 corresponde a la fecha que quedó pegado el rut, es variable)
+
+select * from "ModuloStates"; (Buscamos la fecha desde cuando se quedó pegado el rut)
+
+delete from "ModuloStates" where modulo_id=28329;  (28329 corresponde a la fecha que quedó pegado el rut, es variable)
+
+—----------------------------------------
+Rescatar Query.
+
+docker exec -it postgres psql -U postgres -d postgres -c "COPY (SELECT * FROM "EventHooks" order by inserted_at desc) TO STDOUT WITH CSV HEADER" > /home/panther/file.csv
+—-----------------------------------------
+
+Si la tarjeta de mixxer queda cacheada
+
+Control + Alt + F1 para desplegar la consola
+
+- Ingresar a la terminal
+- nmcli con (Rescatar el nombre de la tarjeta)
+- sudo nmcli dev delete "nombre de la tarjeta"
+- nmcli dev show (Validar que se cree de nuevo por dhcp)
+
+—------------------------------------------
+Subir archivo a Deploy desde consola windows.
+
+scp NOMBREDELARCHIVO deploy@support.zeroq.cl:~/static/files/soporte/videos/
+
+—-----------------------------------------
+
+curl --location --request DELETE 'http://150.213.1.210:3030/api/v2/modulos/26308/session' --data ''
+
+—------------------------------------------
+
+Revisar si el rutificador está respondiendo.
+
+Se necesita tener acceso remoto mediante VPN para los comandos.
+
+Abrimos un CMD (Cambiar IP)
+ssh -p 22000 panther@10.5.43.210 -L 3030:localhost:3030
+
+en otro CM
+ssh -p 22000 panther@10.5.43.210 -L 4000:localhost:4000
+
+En navegador pegamos lo siguiente
+localhost:3030/botonera
+
+Presionamos ctrl shift i, nos ubicamos en Network->Fetch/XHR e ingresamos un rut para revisar cómo se comporta el rutificador
+—----------------------------------------------------------------------------------
+Filtros de docker
+
+docker ps -a: muestra todos los contenedores
+
+docker container ls: lista los contenedores
+
+docker container list: El mismo resultado.
+
+docker container ls -n 5: Muestra los últimos contenedores tanto en ejecución como detenidos. -n para mostrar la cantidad con "5".
+
+docker container ls -q: Muestra solo el id de contenedor.
+
+docker container ls –quiet: Devuelve los id de contenedores en modo silencioso.
+
+docker container ls --filter "status=exited": Filtrar por el estado de un contenedor.
+
+docker container ls -a --filter "name=welcome": Buscar por el nombre, pero no nos acordamos de todo el nombre.
+
+docker container ls -a --filter "ancestor=docker/welcome-to-docker"
+—-----------------------------------------------------------------------------------
+Para detener un contenedor. primero, docker ps
+
+docker stop -t 60 conteinerid: le decimos que espere 60 segundos para detenerlo.
+
+docker pause conteinerid: Pausa el contenedor
+
+docker rm conteinerid: Elimina el contenedor
+
+docker container prune: Proporciona docker para eliminar los contenedores que no están en  ejecución.
+
+—--------------------------------------------------------------------------------
+Logs de contenedor
+
+docker logs nombredecontenedor: Muestra los logs del contenedor
+
+docker logs nombredecontenedor -f: se va actualizando los logs en tiempo real.
+
+—--------------------------------------------------------------------------------
+
+Cambio de credenciales con PowerShell.
+
+(Get-Content .env) -replace 'LOCATION_USER\s*=\s*".*"', 'LOCATION_USER = "Nuevousuario"' | Set-Content .env
+
+(Get-Content .env) -replace 'LOCATION_PASS\s*=\s*".*"', 'LOCATION_PASS = "Nuevapass"' | Set-Content .env
+
+—---------------------------------------------------------------------------------
+Validaciones del servicio para tótem con windows y docker
+
+Ver si el puerto 3030 está abierto. Test-NetConnection -ComputerName localhost -Port 3030
+
+Revisar si el servicio levanta: curl.exe http://localhost:3030/api/v1/lines
+
+—-------------------------------------------------
+
+Revisar la carpeta con más GB en powershell.
+
+Get-ChildItem -Path C:\ -Directory -ErrorAction SilentlyContinue |
+  ForEach-Object {
+    $sizeBytes = (Get-ChildItem -Path $_.FullName -Recurse -ErrorAction SilentlyContinue |
+      Measure-Object -Property Length -Sum).Sum
+    [PSCustomObject]@{
+      Folder = $_.FullName
+      SizeGB = [math]::Round($sizeBytes / 1GB, 2)
+    }
+  } | Sort-Object SizeGB -Descending | Select-Object -First 50
+
+—-------------------
+
+Limpieza de windows.
+
+Automatización > Script
+Ejecutar Script desde ninjaOne, Desactivar la hibernación.
+
+Automatización > Nativa
+
+—---------------------------
+Solución para impresión de Cruz Verde
+
+Instalamos script "Automatización" > Script
+
+Instalamos estos dos.
+
+—----------------------------------------
+
+cd local
+docker exec -it postgres psql -U postgres
+ModuloStates
+
+select * from "ModuloStates" where inserted_at::date between '2025-12-15' and '2025-12-16';
+
+postgres=# select count(*) from "ModuloStates" where "executive"->>'rut'='missing' and inserted_at::date between '2025-09-01' and '2025-09-30';
+
+—-----------------------------------------
+
+aplicar varias veces
+docker-compose restart backend
+25-11-18 01:20:03 info: Done starting Express
+25-11-18 01:20:03 info: Done starting local backend.
+
+—-------------------------------------
+Bajar la calidad del video
+
+ffmpeg -i videos.mp4 -vcodec libx264 -acodec aac -movflags +faststart -preset fast -crf 23 video.mp4
+
+—-----------------------------------
+
+Buscar archivos con powershell
+audios
+Get-ChildItem -Path C:\ -Recurse -Filter "*.wav" -File -ErrorAction SilentlyContinue
+
+—------------------------------------
+Ver el archivo con mayor tamaño en el disco local C (windows)
+
+Get-ChildItem C:\ -Recurse -File -ErrorAction SilentlyContinue |
+Sort-Object Length -Descending |
+Select-Object -First 1 FullName, @{Name="SizeMB";Expression={[math]::Round($_.Length / 1MB, 2)}}
+
+—---------------------------------
+Error network local_default is ambiguous
+
+docker network ls | grep local_default
+
+docker network rm <ID_RED>
+
+—----------------------------------
+Ver el espacio del disco con powershel, en GB
+
+Get-Volume | Select-Object DriveLetter, FileSystemType,
+>> @{Name="Size (GB)";Expression={[math]::Round($_.Size / 1GB, 2)}},
+>> @{Name="RemainingSpace (GB)";Expression={[math]::Round($_.SizeRemaining / 1GB, 2)}}
+
+—----------------------------------
+Actualizar sucursal de Local a Web (cloud)
+
+Por cli, desde local
+curl -# -o botonera.deb https://media.zeroq.cl/builds/web-keypad_1.2.0_amd64.deb --insecure
+
+sudo dpkg -i botonera.deb
+
+wget zeroq.cl/support/files/soporte/archivos/web/docker-compose.yml
+
+Placa antigua
+sudo nano ~/.config/web-keypad/config.json
+
+Placa nueva
+sudo nano /home/panther/.config/web-keypad/config.json
+
+En:
+"printerMode": "internal-service".
+
+Desde vista gráfica
+Placa antigua
+logo de Ubuntu > autostart > Desmarcar la casilla de Zeroq > Añadir > web-keypad > guardar
+
+Placa nueva
+logo de Ubuntu > configuración de LXQt > Configuración de la sesión > Inicio automático > Desmarcar la casilla de Zeroq > Añadir > Nombre: web-keypad comando: /usr/bin/web-keypad > Aceptar
+
+Insertar la licencia o key
+
+—----------------------------------
+Cambiar configuración de docker-compose.yml mediante comando "edit", powershell
+
+cd /
+cd local
+edit docker-compose.yml
+
+Se mostrará algo como en la imagen compartida, donde se puede editar como nano o vim
+ctrl+s: guardar
+ctrl+q: Salir

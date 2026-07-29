@@ -1,0 +1,408 @@
+// ZeroQ Support Hub — Prisma schema
+// Alcance actual: Authentication (Identity) + Knowledge (Procedimientos,
+// Categorías, Etiquetas, Versiones, Documentación, Favoritos) + Support
+// (Clientes, Infraestructura, Casos Resueltos/Incidencias, Evidencias/Logs)
+// + Search & AI (RAG — ver docs/architecture/AI_RAG_DESIGN.md).
+//
+// Desviaciones deliberadas respecto a DATABASE_DESIGN.md, acordadas (ver
+// docs/architecture/ARCHITECTURE.md si se necesita el detalle):
+//   - Sin `ReviewRequest`: el estado de Procedure transiciona directo
+//     (draft -> in_review -> approved/deprecated), gateado por Policy de rol,
+//     sin tabla de auditoría de revisión separada todavía.
+//   - Sin `Comment`, `ViewHistory` — no pedidos todavía.
+//   - `Attachment`: se construye ahora solo el lado `caseId` (Evidencias/Logs
+//     de Casos) — `procedureId` queda en el modelo (documentado como
+//     polimórfico en DATABASE_DESIGN.md) pero sin UI de subida en Knowledge
+//     todavía. El CHECK "exactamente uno de los dos no-nulo" NO se puede
+//     expresar en schema.prisma (Prisma no soporta @@check nativo, verificado
+//     de nuevo en Prisma 7) — se agrega a mano en la migración SQL y se
+//     refuerza también en el use case de subida.
+//   - `Document.clientId` sigue sin implementarse (documentos no se asocian
+//     a un cliente específico todavía) — no era parte de este pedido tampoco.
+//
+// Prisma 7: la URL de conexión ya no vive en este archivo, se resuelve en
+// prisma.config.ts (ver ese archivo para el porqué de url vs directUrl con
+// el pooler de Supabase).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  supervisor
+  engineer_l1
+  engineer_l2
+  readonly
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authoredProcedures  Procedure[]        @relation("ProcedureAuthor")
+  authoredVersions    ProcedureVersion[] @relation("ProcedureVersionAuthor")
+  uploadedDocuments   Document[]         @relation("DocumentUploadedBy")
+  favorites           Favorite[]
+  resolvedCases       ResolvedCase[]     @relation("CaseEngineer")
+  uploadedAttachments Attachment[]       @relation("AttachmentUploadedBy")
+  aiConversations     AIConversation[]
+
+  @@map("users")
+}
+
+enum ProcedureStatus {
+  draft
+  in_review
+  approved
+  deprecated
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+}
+
+enum DocumentFileType {
+  manual
+  datasheet
+  firmware_notes
+  otro
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  parentId    String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+
+  procedures    Procedure[]
+  documents     Document[]
+  resolvedCases ResolvedCase[]
+
+  @@index([parentId])
+}
+
+model Procedure {
+  id                   String          @id @default(cuid())
+  title                String
+  slug                 String          @unique
+  categoryId           String
+  status               ProcedureStatus @default(draft)
+  riskLevel            RiskLevel
+  estimatedTimeMinutes Int?
+  currentVersionId     String?         @unique
+  authorId             String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  category       Category           @relation(fields: [categoryId], references: [id])
+  author         User               @relation("ProcedureAuthor", fields: [authorId], references: [id])
+  currentVersion ProcedureVersion?  @relation("ProcedureCurrentVersion", fields: [currentVersionId], references: [id])
+  versions       ProcedureVersion[] @relation("ProcedureVersions")
+  tags           ProcedureTag[]
+  favorites      Favorite[]
+  cases          CaseProcedure[]
+  attachments    Attachment[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([authorId])
+}
+
+model ProcedureVersion {
+  id              String   @id @default(cuid())
+  procedureId     String
+  versionNumber   Int
+  contentMarkdown String   @db.Text
+  changeSummary   String?
+  authorId        String
+  createdAt       DateTime @default(now())
+
+  procedure Procedure  @relation("ProcedureVersions", fields: [procedureId], references: [id])
+  author    User       @relation("ProcedureVersionAuthor", fields: [authorId], references: [id])
+  currentOf Procedure? @relation("ProcedureCurrentVersion")
+
+  @@unique([procedureId, versionNumber])
+  @@index([procedureId])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  procedures ProcedureTag[]
+}
+
+model ProcedureTag {
+  procedureId String
+  tagId       String
+
+  procedure Procedure @relation(fields: [procedureId], references: [id])
+  tag       Tag       @relation(fields: [tagId], references: [id])
+
+  @@id([procedureId, tagId])
+  @@index([tagId])
+}
+
+model Document {
+  id           String           @id @default(cuid())
+  title        String
+  categoryId   String
+  fileType     DocumentFileType
+  storageKey   String
+  uploadedBy   String
+  supersedesId String?          @unique
+  createdAt    DateTime         @default(now())
+
+  category     Category  @relation(fields: [categoryId], references: [id])
+  uploader     User      @relation("DocumentUploadedBy", fields: [uploadedBy], references: [id])
+  supersedes   Document? @relation("DocumentSupersedes", fields: [supersedesId], references: [id])
+  supersededBy Document? @relation("DocumentSupersedes")
+
+  @@index([categoryId])
+}
+
+model Favorite {
+  userId      String
+  procedureId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  procedure Procedure @relation(fields: [procedureId], references: [id])
+
+  @@id([userId, procedureId])
+  @@index([procedureId])
+}
+
+// ---------------------------------------------------------------------------
+// Support: Clients + Cases (Casos Resueltos/Incidencias, Evidencias/Logs)
+// ---------------------------------------------------------------------------
+
+enum ClientType {
+  banco
+  hospital
+  municipalidad
+  retail
+  gobierno
+  otro
+}
+
+enum AssetType {
+  totem
+  modulo_atencion
+  pantalla
+  impresora
+  servidor
+  tv_box
+  otro
+}
+
+model Client {
+  id          String     @id @default(cuid())
+  name        String
+  type        ClientType
+  contactInfo Json?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  assets        InfrastructureAsset[]
+  resolvedCases ResolvedCase[]
+
+  @@index([type])
+  @@index([active])
+}
+
+model InfrastructureAsset {
+  id           String    @id @default(cuid())
+  clientId     String
+  type         AssetType
+  model        String?
+  location     String?
+  serialNumber String?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  client        Client         @relation(fields: [clientId], references: [id])
+  resolvedCases ResolvedCase[]
+
+  @@index([clientId])
+  @@index([type])
+}
+
+model ResolvedCase {
+  id                    String   @id @default(cuid())
+  title                 String
+  description           String   @db.Text
+  clientId              String?
+  infrastructureAssetId String?
+  categoryId            String
+  engineerId            String
+  symptoms              String   @db.Text
+  rootCause             String   @db.Text
+  solution              String   @db.Text
+  timeSpentMinutes      Int?
+  resolvedAt            DateTime @default(now())
+  createdAt             DateTime @default(now())
+
+  client              Client?              @relation(fields: [clientId], references: [id])
+  infrastructureAsset InfrastructureAsset? @relation(fields: [infrastructureAssetId], references: [id])
+  category            Category             @relation(fields: [categoryId], references: [id])
+  engineer            User                 @relation("CaseEngineer", fields: [engineerId], references: [id])
+  attachments         Attachment[]
+  procedures          CaseProcedure[]
+
+  @@index([clientId])
+  @@index([infrastructureAssetId])
+  @@index([categoryId])
+  @@index([engineerId])
+  @@index([resolvedAt])
+}
+
+model CaseProcedure {
+  caseId      String
+  procedureId String
+
+  case      ResolvedCase @relation(fields: [caseId], references: [id])
+  procedure Procedure    @relation(fields: [procedureId], references: [id])
+
+  @@id([caseId, procedureId])
+  @@index([procedureId])
+}
+
+enum AttachmentFileType {
+  image
+  video
+  pdf
+  config
+  log
+}
+
+// Polimórfico (procedureId? / caseId?) por diseño ya aprobado en
+// DATABASE_DESIGN.md — Prisma no soporta CHECK nativo, se agrega
+// "num_nonnulls(procedure_id, case_id) = 1" a mano en la migración SQL (ver
+// nota de cabecera) y se valida también en el use case de subida.
+model Attachment {
+  id          String             @id @default(cuid())
+  procedureId String?
+  caseId      String?
+  fileType    AttachmentFileType
+  storageKey  String
+  uploadedBy  String
+  createdAt   DateTime           @default(now())
+
+  procedure Procedure?    @relation(fields: [procedureId], references: [id])
+  case      ResolvedCase? @relation(fields: [caseId], references: [id])
+  uploader  User          @relation("AttachmentUploadedBy", fields: [uploadedBy], references: [id])
+
+  @@index([procedureId])
+  @@index([caseId])
+}
+
+// ---------------------------------------------------------------------------
+// Search & AI (RAG) — ver docs/architecture/AI_RAG_DESIGN.md para el diseño
+// completo (arquitectura, embeddings, chunking, prompt, retrieval, historial).
+//
+// Alcance de esta implementación: se indexa `Procedure` (al aprobarse, vía
+// `ProcedureVersion.contentMarkdown`) y `ResolvedCase` (al crearse). `Document`
+// queda deliberadamente fuera — su contenido es un archivo binario (PDF/
+// manual) sin texto extraído; indexarlo requiere un paso de extracción de
+// texto (OCR/parsing) que no forma parte de este pedido y se retoma cuando se
+// pida el caso de uso de análisis de archivos.
+//
+// `embedding` usa `Unsupported(...)` porque Prisma no modela `vector`/
+// `halfvec` nativamente (D1). La columna real, su extensión (`CREATE
+// EXTENSION vector`), el índice HNSW y la columna generada `tsvector` para
+// full-text (retrieval híbrido) se crean a mano — ver prisma/manual-sql/.
+// Ningún campo de este bloque se toca por Prisma Client salvo lectura/
+// escritura de las columnas no-vector; `embedding` y el `tsvector` derivado
+// se escriben/leen exclusivamente vía $executeRaw/$queryRaw en
+// PgVectorStore (mismo patrón ya usado para el CHECK de `Attachment`: campos
+// que Prisma no puede expresar se documentan acá y se aplican por SQL manual).
+//
+// Se eligió `halfvec(1024)` en vez de `vector(1024)` (que decía
+// ARCHITECTURE.md §5.2 originalmente) siguiendo el golden path de la skill
+// `pgvector-semantic-search`: mismo recall, mitad de espacio de
+// almacenamiento/índice — refinamiento de implementación, no un cambio de
+// decisión arquitectónica.
+enum DocumentChunkSourceType {
+  procedure_version
+  resolved_case
+}
+
+model DocumentChunk {
+  id         String                        @id @default(cuid())
+  sourceType DocumentChunkSourceType
+  sourceId   String
+  content    String                        @db.Text
+  // Nullable a nivel Prisma: la fila se crea primero sin embedding (Prisma
+  // Client no puede escribir un campo Unsupported), y un segundo paso en
+  // PgVectorStore.insertChunks() la completa vía $executeRaw en la misma
+  // operación de indexación — nunca queda una fila sin embedding en reposo.
+  embedding  Unsupported("halfvec(1024)")?
+  chunkIndex Int
+  categoryId String?
+  clientId   String?
+  createdAt  DateTime                      @default(now())
+
+  @@index([sourceType, sourceId])
+  @@index([categoryId])
+  @@index([clientId])
+}
+
+enum AIMessageRole {
+  user
+  assistant
+}
+
+// Historial de conversaciones con la IA (distinto de `ViewHistory`, que es
+// historial de páginas vistas — ver AI_RAG_DESIGN.md §6). Privado por
+// usuario: no hay query "ver conversaciones de otro usuario" en este alcance.
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id])
+  messages AIMessage[]
+
+  @@index([userId])
+}
+
+model AIMessage {
+  id               String        @id @default(cuid())
+  conversationId   String
+  role             AIMessageRole
+  content          String        @db.Text
+  // Array de { type: "procedure"|"resolved_case", sourceId, title } — null
+  // en mensajes role=user, obligatorio en mensajes role=assistant que citan
+  // contexto (invariante de trazabilidad, ver AI_RAG_DESIGN.md §4.3).
+  sourceReferences Json?
+  createdAt        DateTime      @default(now())
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+}

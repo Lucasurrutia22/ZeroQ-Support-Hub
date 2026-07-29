@@ -1,0 +1,49 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { ZodError } from "zod";
+import { getActingUserOrThrow } from "@/modules/identity/application/get-acting-user";
+import { uploadDocumentMetadataSchema } from "@/lib/schemas/knowledge";
+import { uploadDocument } from "@/modules/knowledge/application/use-cases/documents";
+
+export async function uploadDocumentAction(formData: FormData) {
+  const actingUser = await getActingUserOrThrow();
+
+  let metadata: ReturnType<typeof uploadDocumentMetadataSchema.parse>;
+  try {
+    metadata = uploadDocumentMetadataSchema.parse({
+      title: formData.get("title"),
+      categoryId: formData.get("categoryId"),
+      fileType: formData.get("fileType"),
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      redirect("/documents/upload?error=invalid_input");
+    }
+    throw error;
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/documents/upload?error=missing_file");
+  }
+
+  const supersedesId = formData.get("supersedesId");
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const result = await uploadDocument(actingUser, {
+    ...metadata,
+    fileName: file.name,
+    fileBuffer: buffer,
+    contentType: file.type || "application/octet-stream",
+    supersedesId: typeof supersedesId === "string" ? supersedesId : undefined,
+  });
+
+  if (!result.ok) {
+    redirect(`/documents/upload?error=${encodeURIComponent(result.error.code)}`);
+  }
+
+  revalidatePath("/documents");
+  redirect("/documents");
+}
