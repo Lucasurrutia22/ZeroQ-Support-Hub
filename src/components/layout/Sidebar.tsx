@@ -27,12 +27,12 @@ export function Sidebar({ role }: SidebarProps) {
           type="button"
           onClick={() => setCollapsed((value) => !value)}
           aria-label={collapsed ? "Expandir navegación" : "Colapsar navegación"}
-          className="m-2 self-end rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          className="m-2 self-end rounded-md p-2 text-slate-400 transition-colors hover:bg-slate-900 hover:text-white"
         >
           {collapsed ? "»" : "«"}
         </button>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-2 pb-4">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
           {visibleItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -44,7 +44,7 @@ export function Sidebar({ role }: SidebarProps) {
                 title={collapsed ? item.label : undefined}
                 className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-slate-800 text-white"
+                    ? "bg-indigo-600 text-white"
                     : "text-slate-300 hover:bg-slate-900 hover:text-white"
                 } ${collapsed ? "justify-center" : ""}`}
               >

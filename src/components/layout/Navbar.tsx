@@ -23,16 +23,19 @@ export function Navbar({ user }: NavbarProps) {
     .toUpperCase();
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950">
-      <Link href="/dashboard" className="font-semibold tracking-tight">
-        ZeroQ Support Hub
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-950/80">
+      <Link href="/procedures" className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-xs font-bold text-white">
+          ZQ
+        </span>
+        <span className="font-semibold tracking-tight">ZeroQ Support Hub</span>
       </Link>
 
       <div className="flex items-center gap-3">
         {/* Atajo visual al buscador — la búsqueda en sí se implementa en Fase 5 (Search & AI). */}
         <Link
           href="/search"
-          className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
+          className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-500 transition-colors hover:border-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900"
         >
           <span>Buscar…</span>
           <kbd className="rounded border border-slate-300 px-1 text-xs dark:border-slate-700">
@@ -46,7 +49,7 @@ export function Navbar({ user }: NavbarProps) {
             onClick={() => setMenuOpen((value) => !value)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
           >
             {initials}
           </button>

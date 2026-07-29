@@ -16,7 +16,7 @@ export function ConversationSidebar({
     <aside className="flex w-64 shrink-0 flex-col gap-3">
       <Link
         href="/ai"
-        className="rounded-md bg-slate-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+        className="rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
       >
         Nueva conversación
       </Link>

@@ -24,7 +24,7 @@ export default async function LoginPage({
       await signIn("credentials", {
         email: formData.get("email"),
         password: formData.get("password"),
-        redirectTo: (formData.get("callbackUrl") as string) || "/dashboard",
+        redirectTo: (formData.get("callbackUrl") as string) || "/procedures",
       });
     } catch (error) {
       if (error instanceof AuthError) {
@@ -53,7 +53,7 @@ export default async function LoginPage({
       ) : null}
 
       <form action={authenticate} className="mt-6 flex flex-col gap-4">
-        <input type="hidden" name="callbackUrl" value={callbackUrl ?? "/dashboard"} />
+        <input type="hidden" name="callbackUrl" value={callbackUrl ?? "/procedures"} />
 
         <label className="flex flex-col gap-1 text-sm">
           Email
@@ -79,7 +79,7 @@ export default async function LoginPage({
 
         <button
           type="submit"
-          className="mt-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className="mt-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
         >
           Iniciar sesión
         </button>

@@ -34,7 +34,7 @@ export default async function DocumentsPage({
         {canUpload ? (
           <Link
             href="/documents/upload"
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
           >
             Subir documento
           </Link>
