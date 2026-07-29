@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import Markdown, { type Components } from "react-markdown";
 import type { SourceReference, AIMessageRole } from "@/modules/search-ai/domain/types";
 import {
   SOURCE_TYPE_LABELS,
@@ -11,30 +10,7 @@ import {
   badgeClass,
   errorMessageFor,
 } from "@/lib/ai-ui";
-
-// Sin rehypePlugins (sin rehype-raw): react-markdown escapa cualquier
-// etiqueta HTML cruda que el LLM haya generado por error (nunca la ejecuta
-// como DOM real) — es la mitigación en la capa de UI para el mismo problema
-// que ya se ataca en el prompt (ask-ai.ts regla 9: "prohibido HTML"). Estilos
-// vía `components` en vez de @tailwindcss/typography: no vale la pena una
-// dependencia nueva para esto.
-const MARKDOWN_COMPONENTS: Components = {
-  h2: ({ children }) => <h2 className="mt-3 mb-1 text-sm font-semibold first:mt-0">{children}</h2>,
-  ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
-  li: ({ children }) => <li className="text-sm">{children}</li>,
-  p: ({ children }) => <p className="text-sm leading-relaxed">{children}</p>,
-  code: ({ children }) => (
-    <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs dark:bg-slate-800">
-      {children}
-    </code>
-  ),
-  pre: ({ children }) => (
-    <pre className="overflow-x-auto rounded bg-slate-200 p-2 text-xs dark:bg-slate-800">
-      {children}
-    </pre>
-  ),
-};
+import { MarkdownContent } from "@/components/shared/MarkdownContent";
 
 export interface ChatMessage {
   id: string;
@@ -171,9 +147,7 @@ export function AIChatClient({
                 }`}
               >
                 {message.role === "assistant" ? (
-                  <div className="[&>*:first-child]:mt-0">
-                    <Markdown components={MARKDOWN_COMPONENTS}>{message.content}</Markdown>
-                  </div>
+                  <MarkdownContent content={message.content} />
                 ) : (
                   <p className="whitespace-pre-wrap text-sm">{message.content}</p>
                 )}
@@ -232,7 +206,7 @@ export function AIChatClient({
           type="button"
           onClick={() => void handleSend()}
           disabled={loading || !input.trim()}
-          className="shrink-0 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className="shrink-0 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
         >
           Enviar
         </button>

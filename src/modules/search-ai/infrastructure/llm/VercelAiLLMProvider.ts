@@ -19,7 +19,6 @@ const askAIOutputSchema = z.object({
   ),
   commands: z.array(z.string()),
   warnings: z.array(z.string()),
-  similarCases: z.array(z.object({ sourceRef: z.string(), title: z.string() })),
   externalSources: z.array(z.object({ url: z.string(), title: z.string() })),
   riskLevel: z.enum(["low", "medium", "high"]).nullable(),
   estimatedTimeMinutes: z.number().nullable(),
