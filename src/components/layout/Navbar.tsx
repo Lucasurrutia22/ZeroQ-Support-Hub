@@ -5,6 +5,7 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { roleLabel } from "@/modules/identity/domain/role";
 import type { Role } from "@/modules/identity/domain/role";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 interface NavbarProps {
   user: {
@@ -23,14 +24,9 @@ export function Navbar({ user }: NavbarProps) {
     .toUpperCase();
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-950/80">
-      <Link href="/procedures" className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-xs font-bold text-white">
-          ZQ
-        </span>
-        <span className="font-semibold tracking-tight">ZeroQ Support Hub</span>
-      </Link>
-
+    <header className="flex h-14 shrink-0 items-center justify-end border-b border-slate-200 bg-white/80 px-4 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-950/80">
+      {/* La marca (logo + "ZeroQ Support Hub") vive en el encabezado del
+          Sidebar — un solo lugar, no duplicarla acá. */}
       <div className="flex items-center gap-3">
         {/* Atajo visual al buscador — la búsqueda en sí se implementa en Fase 5 (Search & AI). */}
         <Link
@@ -43,13 +39,15 @@ export function Navbar({ user }: NavbarProps) {
           </kbd>
         </Link>
 
+        <ThemeToggle />
+
         <div className="relative">
           <button
             type="button"
             onClick={() => setMenuOpen((value) => !value)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
           >
             {initials}
           </button>

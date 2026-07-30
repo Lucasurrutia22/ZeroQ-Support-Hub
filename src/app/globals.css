@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Dark mode controlado por la clase `.dark` en <html> (ThemeToggle), no solo
+   por preferencia del sistema — permite al usuario elegir explícitamente el
+   tema una vez logueado. El script bloqueante en layout.tsx setea esta clase
+   antes del primer paint (evita flash de tema incorrecto). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -7,11 +13,9 @@
   --sidebar-foreground: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1120;
-    --foreground: #e2e8f0;
-  }
+:root.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
 }
 
 body {

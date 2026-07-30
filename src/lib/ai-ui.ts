@@ -55,3 +55,22 @@ export function formatDateTime(date: Date): string {
     minute: "2-digit",
   }).format(date);
 }
+
+// Timestamp corto para debajo de cada burbuja del chat — a diferencia de
+// formatDateTime (usado en la lista de conversaciones), acá alcanza con la
+// hora: la fecha completa ya se infiere del contexto de la conversación.
+export function initialsFor(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part.charAt(0))
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+export function formatTime(date: Date): string {
+  return new Intl.DateTimeFormat("es-CL", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}

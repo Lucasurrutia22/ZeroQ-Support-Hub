@@ -4,6 +4,7 @@ import { canUseAI } from "@/modules/search-ai/application/policies";
 import { listConversations } from "@/modules/search-ai/application/use-cases/conversations";
 import { ConversationSidebar } from "@/components/ai/ConversationSidebar";
 import { AIChatClient } from "@/components/ai/AIChatClient";
+import { initialsFor } from "@/lib/ai-ui";
 
 // UC-AI-02 (AI_RAG_DESIGN.md) — Solo Lectura queda excluido del chat
 // conversacional (confirmado con el usuario al diseñar AI_RAG_DESIGN.md). El
@@ -25,8 +26,18 @@ export default async function AIChatPage() {
     <div className="flex h-full min-h-0 gap-6">
       <ConversationSidebar conversations={conversations} />
       <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Asistente IA</h1>
-        <AIChatClient initialMessages={[]} />
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            Asistente IA
+          </h1>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+            Respuestas basadas en la Bitácora de Tótems, siempre citando la fuente exacta.
+          </p>
+        </div>
+        <AIChatClient
+          initialMessages={[]}
+          userInitials={initialsFor(session!.user.name ?? session!.user.email ?? "TÚ")}
+        />
       </div>
     </div>
   );
