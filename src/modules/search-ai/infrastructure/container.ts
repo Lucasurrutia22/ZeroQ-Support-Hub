@@ -1,3 +1,4 @@
+import { NextAfterBackgroundTaskRunner } from "@/shared/infrastructure/background/NextAfterBackgroundTaskRunner";
 import { VoyageEmbeddingProvider } from "./embeddings/VoyageEmbeddingProvider";
 import { PgAnswerCacheStore } from "./persistence/PgAnswerCacheStore";
 import { PgVectorStore } from "./persistence/PgVectorStore";
@@ -20,3 +21,4 @@ export const aiMessageRepository = new PrismaAIMessageRepository();
 export const sourceContentReader = new PrismaSourceContentReader();
 export const sourceMetadataReader = new SourceMetadataReader();
 export const webSearchProvider = new TavilyWebSearchProvider();
+export const backgroundTaskRunner = new NextAfterBackgroundTaskRunner();

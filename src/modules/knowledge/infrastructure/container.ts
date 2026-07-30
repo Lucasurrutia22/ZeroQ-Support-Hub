@@ -5,6 +5,7 @@ import { PrismaDocumentRepository } from "./persistence/PrismaDocumentRepository
 import { PrismaFavoriteRepository } from "./persistence/PrismaFavoriteRepository";
 import { PrismaViewHistoryRepository } from "./persistence/PrismaViewHistoryRepository";
 import { SupabaseFileStorage } from "@/shared/infrastructure/storage/SupabaseFileStorage";
+import { NextAfterBackgroundTaskRunner } from "@/shared/infrastructure/background/NextAfterBackgroundTaskRunner";
 import { contentIndexer } from "@/modules/search-ai/infrastructure/ContentIndexerAdapter";
 import { getLLMProvider } from "@/modules/search-ai/infrastructure/llm/llm-provider-factory";
 import { answerCacheStore } from "@/modules/search-ai/infrastructure/container";
@@ -19,6 +20,11 @@ export const documentRepository = new PrismaDocumentRepository();
 export const favoriteRepository = new PrismaFavoriteRepository();
 export const viewHistoryRepository = new PrismaViewHistoryRepository();
 export const documentStorage = new SupabaseFileStorage("documents");
+// Ver src/shared/domain/ports/background-task.ts: `after()` de Next.js en
+// vez de una promesa suelta, para que la ingesta de Bitácora (uploadDocument
+// → ingestDocumentAsBitacoraEntry) no se corte cuando la Server Action ya
+// terminó de responder pero el LLM todavía está resumiendo.
+export const backgroundTaskRunner = new NextAfterBackgroundTaskRunner();
 // Reexportado desde search-ai/infrastructure (implementa el port compartido
 // ContentIndexer, ver src/shared/domain/ports/content-indexer.ts) — los use
 // cases de este módulo importan esta instancia, nunca search-ai

@@ -7,6 +7,7 @@ import { getActingUserOrThrow } from "@/modules/identity/application/get-acting-
 import { uploadDocumentMetadataSchema } from "@/lib/schemas/knowledge";
 import { uploadDocument } from "@/modules/knowledge/application/use-cases/documents";
 import { isBitacoraCategory } from "@/modules/knowledge/application/use-cases/bitacora-auto-ingest";
+import { isExtractableFormat } from "@/modules/knowledge/application/document-text-extraction";
 
 export async function uploadDocumentAction(formData: FormData) {
   const actingUser = await getActingUserOrThrow();
@@ -47,7 +48,15 @@ export async function uploadDocumentAction(formData: FormData) {
 
   revalidatePath("/documents");
 
-  const bitacoraEligible = await isBitacoraCategory(metadata.categoryId);
+  // El aviso "se está generando un resumen" solo debe prometerse si de
+  // verdad va a intentarse: categoría de Bitácora Y formato con extractor
+  // real (ver document-text-extraction.ts). Antes esto solo chequeaba la
+  // categoría, así que un .docx sin soportar (o cualquier formato futuro
+  // sin extractor) mostraba el aviso igual aunque la ingesta se descartara
+  // en silencio — confuso, el usuario esperaba verlo en revisión y nunca
+  // aparecía.
+  const bitacoraEligible =
+    (await isBitacoraCategory(metadata.categoryId)) && isExtractableFormat(file.name);
   if (bitacoraEligible) {
     // La generación del Procedure ocurre en segundo plano (ver
     // ingestDocumentAsBitacoraEntry) — se revalidan estas rutas igual porque

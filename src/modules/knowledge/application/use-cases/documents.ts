@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { err, ok, type Result, DomainError } from "@/shared/domain/result";
 import type { ActingUser } from "@/modules/identity/domain/role";
 import {
+  backgroundTaskRunner,
   categoryRepository,
   documentRepository,
   documentStorage,
@@ -69,16 +70,18 @@ export async function uploadDocument(
     supersedesId: command.supersedesId ?? null,
   });
 
-  // Fire-and-forget (mismo patrón que ContentIndexerAdapter.indexAsync): si
-  // la categoría es de Bitácora, genera un Procedure resumido por IA en
-  // segundo plano — no bloquea ni hace fallar esta subida si el documento no
+  // Trabajo en segundo plano vía BackgroundTaskRunner (no una promesa
+  // suelta — ver background-task.ts: Next.js puede cortarla apenas la
+  // Server Action termina de responder, y el LLM que resume el documento
+  // tarda minutos). No bloquea ni hace fallar esta subida si el documento no
   // es elegible, no se puede extraer texto, o el LLM activo falla.
-  void ingestDocumentAsBitacoraEntry(
-    actingUser,
-    document,
-    command.fileBuffer,
-    command.fileName,
-  ).then((result) => {
+  backgroundTaskRunner.run(async () => {
+    const result = await ingestDocumentAsBitacoraEntry(
+      actingUser,
+      document,
+      command.fileBuffer,
+      command.fileName,
+    );
     if (!result.ok) {
       console.error(
         `[knowledge] No se generó Bitácora automática para el documento ${document.id}: ${result.error.code} — ${result.error.message}`,

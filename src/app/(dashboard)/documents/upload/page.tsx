@@ -42,10 +42,12 @@ export default async function UploadDocumentPage({
 
       <p className="max-w-2xl rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
         <span aria-hidden>💡</span> Si elegís una categoría de{" "}
-        <span className="font-medium">Bitácora de Tótems</span>, el sistema lee el documento
-        (.txt, .md o .pdf) y genera automáticamente una entrada resumida por IA en Bitácora —
-        queda en <span className="font-medium">revisión</span> hasta que un supervisor la apruebe,
-        momento en el que también se suma al conocimiento del Asistente de IA.
+        <span className="font-medium">Bitácora de Tótems</span> y el archivo es{" "}
+        <span className="font-medium">.txt, .md, .pdf o .docx</span>, el sistema lo lee y genera
+        automáticamente una entrada resumida por IA en Bitácora — queda en{" "}
+        <span className="font-medium">revisión</span> hasta que un supervisor la apruebe, momento
+        en el que también se suma al conocimiento del Asistente de IA. Otros formatos (imágenes,
+        planillas, etc.) se suben igual, solo no generan esta entrada automática.
       </p>
 
       {errorMessage ? (
