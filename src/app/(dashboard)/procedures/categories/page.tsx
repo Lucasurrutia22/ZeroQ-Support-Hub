@@ -4,6 +4,7 @@ import { canManageCategories } from "@/modules/knowledge/application/policies";
 import type { Category } from "@/modules/knowledge/domain/types";
 import { createCategoryAction } from "./actions";
 import { errorMessageFor } from "@/lib/knowledge-ui";
+import { FORM_INPUT_CLASSES } from "@/lib/form-ui";
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -99,7 +100,7 @@ export default async function CategoriesPage({
                 required
                 minLength={2}
                 maxLength={100}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className={FORM_INPUT_CLASSES}
               />
             </label>
 
@@ -108,7 +109,7 @@ export default async function CategoriesPage({
               <select
                 name="parentId"
                 defaultValue=""
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className={FORM_INPUT_CLASSES}
               >
                 <option value="">Sin padre (categoría raíz)</option>
                 {categories.map((category) => (
@@ -125,13 +126,13 @@ export default async function CategoriesPage({
                 name="description"
                 rows={3}
                 maxLength={500}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className={FORM_INPUT_CLASSES}
               />
             </label>
 
             <button
               type="submit"
-              className="mt-2 self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+              className="mt-2 self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
             >
               Crear categoría
             </button>

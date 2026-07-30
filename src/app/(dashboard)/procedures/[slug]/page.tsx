@@ -12,11 +12,11 @@ import {
 } from "@/modules/knowledge/application/policies";
 import {
   approveProcedureAction,
-  deprecateProcedureAction,
-  rejectProcedureAction,
   requestReviewAction,
   toggleFavoriteAction,
 } from "../actions";
+import { RejectProcedureButton } from "../RejectProcedureButton";
+import { DeprecateProcedureButton } from "../DeprecateProcedureButton";
 import {
   STATUS_LABELS,
   STATUS_BADGE_CLASSES,
@@ -118,7 +118,7 @@ export default async function ProcedureDetailPage({
           <form action={requestReviewAction.bind(null, procedure.id, procedure.slug)}>
             <button
               type="submit"
-              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
             >
               Solicitar revisión
             </button>
@@ -135,26 +135,20 @@ export default async function ProcedureDetailPage({
                 Aprobar
               </button>
             </form>
-            <form action={rejectProcedureAction.bind(null, procedure.id, procedure.slug)}>
-              <button
-                type="submit"
-                className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
-              >
-                Rechazar
-              </button>
-            </form>
+            <RejectProcedureButton
+              procedureId={procedure.id}
+              slug={procedure.slug}
+              title={procedure.title}
+            />
           </>
         ) : null}
 
         {procedure.status === "approved" && canDeprecateProcedure(role) ? (
-          <form action={deprecateProcedureAction.bind(null, procedure.id, procedure.slug)}>
-            <button
-              type="submit"
-              className="rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-            >
-              Deprecar
-            </button>
-          </form>
+          <DeprecateProcedureButton
+            procedureId={procedure.id}
+            slug={procedure.slug}
+            title={procedure.title}
+          />
         ) : null}
       </div>
 
@@ -200,7 +194,7 @@ function CommandGuide({ markdown }: { markdown: string }) {
             <code className="w-fit rounded bg-slate-100 px-2 py-1 font-mono text-xs dark:bg-slate-900">
               {annotation.command}
             </code>
-            <p className="text-xs font-medium text-indigo-700 dark:text-indigo-400">
+            <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
               📍 {annotation.context}
             </p>
             <p className="text-xs text-slate-600 dark:text-slate-300">{annotation.explanation}</p>

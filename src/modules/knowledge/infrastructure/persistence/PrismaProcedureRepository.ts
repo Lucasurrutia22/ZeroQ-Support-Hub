@@ -8,6 +8,7 @@ import type {
 import type {
   CreateProcedureInput,
   ProcedureListFilter,
+  ProcedurePage,
   ProcedureRepository,
 } from "../../domain/ports";
 
@@ -21,6 +22,17 @@ export const procedureDetailInclude = {
 const detailInclude = procedureDetailInclude;
 
 type ProcedureRow = Prisma.ProcedureGetPayload<{ include: typeof detailInclude }>;
+
+function buildWhere(filter: ProcedureListFilter): Prisma.ProcedureWhereInput {
+  return {
+    categoryId: filter.categoryId,
+    status: filter.status,
+    tags: filter.tagId ? { some: { tagId: filter.tagId } } : undefined,
+    title: filter.search
+      ? { contains: filter.search, mode: "insensitive" }
+      : undefined,
+  };
+}
 
 export function mapProcedure(row: ProcedureRow): ProcedureWithDetails {
   return {
@@ -104,22 +116,34 @@ export class PrismaProcedureRepository implements ProcedureRepository {
   }
 
   async list(filter: ProcedureListFilter): Promise<ProcedureWithDetails[]> {
-    const where: Prisma.ProcedureWhereInput = {
-      categoryId: filter.categoryId,
-      status: filter.status,
-      tags: filter.tagId ? { some: { tagId: filter.tagId } } : undefined,
-      title: filter.search
-        ? { contains: filter.search, mode: "insensitive" }
-        : undefined,
-    };
-
     const rows = await prisma.procedure.findMany({
-      where,
+      where: buildWhere(filter),
       include: detailInclude,
       orderBy: { updatedAt: "desc" },
     });
 
     return rows.map(mapProcedure);
+  }
+
+  async listPaged(
+    filter: ProcedureListFilter,
+    pagination: { page: number; pageSize: number },
+  ): Promise<ProcedurePage> {
+    const where = buildWhere(filter);
+    const skip = Math.max(0, pagination.page - 1) * pagination.pageSize;
+
+    const [rows, total] = await Promise.all([
+      prisma.procedure.findMany({
+        where,
+        include: detailInclude,
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take: pagination.pageSize,
+      }),
+      prisma.procedure.count({ where }),
+    ]);
+
+    return { items: rows.map(mapProcedure), total };
   }
 
   async slugExists(slug: string): Promise<boolean> {

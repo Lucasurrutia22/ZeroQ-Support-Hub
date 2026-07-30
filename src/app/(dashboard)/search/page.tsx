@@ -6,6 +6,7 @@ import {
   badgeClass,
   truncate,
 } from "@/lib/ai-ui";
+import { FORM_INPUT_CLASSES } from "@/lib/form-ui";
 
 // UC-AI-01 (USE_CASES.md) — buscador híbrido disponible para todos los
 // roles, incluido Solo Lectura (canSearch no restringe ninguno). Server
@@ -48,11 +49,11 @@ export default async function SearchPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Ej: la impresora térmica no imprime"
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+          className={`w-full ${FORM_INPUT_CLASSES}`}
         />
         <button
           type="submit"
-          className="shrink-0 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="shrink-0 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
         >
           Buscar
         </button>

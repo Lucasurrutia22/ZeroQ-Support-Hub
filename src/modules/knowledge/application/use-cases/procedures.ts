@@ -2,12 +2,13 @@ import { err, ok, type Result, DomainError } from "@/shared/domain/result";
 import type { ActingUser } from "@/modules/identity/domain/role";
 import { slugify } from "@/lib/slugify";
 import {
+  answerCacheStore,
   categoryRepository,
   contentIndexer,
   procedureRepository,
   tagRepository,
 } from "../../infrastructure/container";
-import type { ProcedureListFilter } from "../../domain/ports";
+import type { ProcedureListFilter, ProcedurePage } from "../../domain/ports";
 import type { ProcedureVersion, ProcedureWithDetails } from "../../domain/types";
 import {
   canApproveProcedure,
@@ -111,6 +112,10 @@ export async function editProcedureContent(
     changeSummary: command.changeSummary ?? null,
     authorId: actingUser.id,
   });
+
+  // El contenido citado por una respuesta cacheada cambió — esa respuesta ya
+  // no es confiable (memoria semántica del chat, ver AnswerCacheStore).
+  await answerCacheStore.invalidateByProcedureId(procedure.id);
 
   return ok(version);
 }
@@ -230,6 +235,9 @@ export async function deprecateProcedure(
   }
 
   await procedureRepository.updateStatus(procedureId, "deprecated");
+  // Ídem editProcedureContent: un procedimiento depreciado no debería seguir
+  // recomendándose desde una respuesta cacheada.
+  await answerCacheStore.invalidateByProcedureId(procedureId);
   return ok(undefined);
 }
 
@@ -237,6 +245,15 @@ export async function listProcedures(
   filter: ProcedureListFilter,
 ): Promise<ProcedureWithDetails[]> {
   return procedureRepository.list(filter);
+}
+
+const DEFAULT_PAGE_SIZE = 20;
+
+export async function listProceduresPaged(
+  filter: ProcedureListFilter,
+  page = 1,
+): Promise<ProcedurePage> {
+  return procedureRepository.listPaged(filter, { page, pageSize: DEFAULT_PAGE_SIZE });
 }
 
 export async function getProcedureBySlug(

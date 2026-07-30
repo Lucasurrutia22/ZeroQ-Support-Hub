@@ -1,9 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getProcedureBySlug } from "@/modules/knowledge/application/use-cases/procedures";
 import { canEditProcedure } from "@/modules/knowledge/application/policies";
 import { editProcedureContentAction } from "../../actions";
 import { errorMessageFor } from "@/lib/knowledge-ui";
+import { FORM_INPUT_CLASSES } from "@/lib/form-ui";
+import { ProcedureContentEditor } from "../../ProcedureContentEditor";
 
 export default async function EditProcedurePage({
   params,
@@ -23,14 +25,7 @@ export default async function EditProcedurePage({
   const errorMessage = errorMessageFor(error);
 
   if (!canEditProcedure(role)) {
-    return (
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Editar procedimiento</h1>
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
-          No tienes permiso para esta acción.
-        </p>
-      </div>
-    );
+    redirect(`/procedures/${procedure.slug}`);
   }
 
   const editAction = editProcedureContentAction.bind(
@@ -55,16 +50,14 @@ export default async function EditProcedurePage({
       ) : null}
 
       <form action={editAction} className="flex max-w-2xl flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           Contenido (Markdown)
-          <textarea
+          <ProcedureContentEditor
             name="contentMarkdown"
-            required
             rows={16}
             defaultValue={procedure.currentVersion?.contentMarkdown ?? ""}
-            className="rounded-md border border-slate-300 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950"
           />
-        </label>
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           Resumen del cambio (opcional)
@@ -72,13 +65,13 @@ export default async function EditProcedurePage({
             name="changeSummary"
             type="text"
             maxLength={500}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
         <button
           type="submit"
-          className="mt-2 self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="mt-2 self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
         >
           Guardar nueva versión
         </button>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { listProcedures } from "@/modules/knowledge/application/use-cases/procedures";
+import { listProceduresPaged } from "@/modules/knowledge/application/use-cases/procedures";
 import { listCategories } from "@/modules/knowledge/application/use-cases/categories";
 import { canCreateProcedure, canApproveProcedure } from "@/modules/knowledge/application/policies";
 import type { ProcedureStatus } from "@/modules/knowledge/domain/types";
@@ -12,6 +12,7 @@ import {
   badgeClass,
   errorMessageFor,
 } from "@/lib/knowledge-ui";
+import { FORM_INPUT_CLASSES } from "@/lib/form-ui";
 
 const STATUS_OPTIONS: ProcedureStatus[] = [
   "draft",
@@ -20,28 +21,54 @@ const STATUS_OPTIONS: ProcedureStatus[] = [
   "deprecated",
 ];
 
+function buildQuery(params: Record<string, string | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
 export default async function ProceduresPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categoryId?: string; status?: string; error?: string }>;
+  searchParams: Promise<{
+    categoryId?: string;
+    status?: string;
+    q?: string;
+    page?: string;
+    error?: string;
+  }>;
 }) {
-  const { categoryId, status, error } = await searchParams;
+  const { categoryId, status, q, page, error } = await searchParams;
   const session = await auth();
   const role = session!.user.role;
 
   const validStatus = STATUS_OPTIONS.includes(status as ProcedureStatus)
     ? (status as ProcedureStatus)
     : undefined;
+  const search = q?.trim() || undefined;
+  const currentPage = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
 
-  const [procedures, categories] = await Promise.all([
-    listProcedures({ categoryId: categoryId || undefined, status: validStatus }),
+  const [{ items: procedures, total }, categories] = await Promise.all([
+    listProceduresPaged(
+      { categoryId: categoryId || undefined, status: validStatus, search },
+      currentPage,
+    ),
     listCategories(),
   ]);
+
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasFilters = Boolean(categoryId || validStatus || search);
 
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
   const canCreate = canCreateProcedure(role);
   const canReview = canApproveProcedure(role);
   const errorMessage = errorMessageFor(error);
+
+  const baseQueryForPage = { categoryId, status: validStatus, q: search };
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,7 +76,7 @@ export default async function ProceduresPage({
         <div>
           <h1 className="text-2xl font-semibold">Procedimientos</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Base de conocimiento versionada de ZeroQ.
+            Base de conocimiento versionada de ZeroQ — {total} procedimiento{total === 1 ? "" : "s"}.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -70,7 +97,7 @@ export default async function ProceduresPage({
           {canCreate ? (
             <Link
               href="/procedures/new"
-              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
             >
               Nuevo procedimiento
             </Link>
@@ -88,12 +115,23 @@ export default async function ProceduresPage({
         method="get"
         className="flex flex-wrap items-end gap-3 rounded-md border border-slate-200 p-4 dark:border-slate-800"
       >
+        <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-sm">
+          Buscar por título
+          <input
+            type="text"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="ej: redis, impresora, kernel…"
+            className={FORM_INPUT_CLASSES}
+          />
+        </label>
+
         <label className="flex flex-col gap-1 text-sm">
           Categoría
           <select
             name="categoryId"
             defaultValue={categoryId ?? ""}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           >
             <option value="">Todas</option>
             {categories.map((category) => (
@@ -109,7 +147,7 @@ export default async function ProceduresPage({
           <select
             name="status"
             defaultValue={validStatus ?? ""}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           >
             <option value="">Todos</option>
             {STATUS_OPTIONS.map((option) => (
@@ -126,6 +164,14 @@ export default async function ProceduresPage({
         >
           Filtrar
         </button>
+        {hasFilters ? (
+          <Link
+            href="/procedures"
+            className="text-sm text-slate-500 hover:text-slate-700 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            Limpiar filtros
+          </Link>
+        ) : null}
       </form>
 
       <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-800">
@@ -146,7 +192,17 @@ export default async function ProceduresPage({
                   colSpan={5}
                   className="px-4 py-6 text-center text-slate-500 dark:text-slate-400"
                 >
-                  No hay procedimientos que coincidan con el filtro.
+                  {hasFilters ? (
+                    <>
+                      Ningún procedimiento coincide con estos filtros.{" "}
+                      <Link href="/procedures" className="text-blue-600 hover:underline dark:text-blue-400">
+                        Limpiar filtros
+                      </Link>
+                      .
+                    </>
+                  ) : (
+                    "Todavía no hay procedimientos cargados."
+                  )}
                 </td>
               </tr>
             ) : (
@@ -182,6 +238,38 @@ export default async function ProceduresPage({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+          <span>
+            Página {currentPage} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Link
+              href={`/procedures${buildQuery({ ...baseQueryForPage, page: String(currentPage - 1) })}`}
+              aria-disabled={currentPage <= 1}
+              className={`rounded-md border border-slate-300 px-3 py-1.5 font-medium dark:border-slate-700 ${
+                currentPage <= 1
+                  ? "pointer-events-none opacity-40"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-900"
+              }`}
+            >
+              Anterior
+            </Link>
+            <Link
+              href={`/procedures${buildQuery({ ...baseQueryForPage, page: String(currentPage + 1) })}`}
+              aria-disabled={currentPage >= totalPages}
+              className={`rounded-md border border-slate-300 px-3 py-1.5 font-medium dark:border-slate-700 ${
+                currentPage >= totalPages
+                  ? "pointer-events-none opacity-40"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-900"
+              }`}
+            >
+              Siguiente
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

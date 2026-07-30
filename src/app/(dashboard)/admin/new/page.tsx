@@ -1,5 +1,6 @@
 import { roleLabel, type Role } from "@/modules/identity/domain/role";
 import { errorMessageFor } from "@/lib/identity-ui";
+import { FORM_INPUT_CLASSES } from "@/lib/form-ui";
 import { createUserAction } from "../actions";
 
 const ROLES: Role[] = ["admin", "supervisor", "engineer_l1", "engineer_l2", "readonly"];
@@ -34,7 +35,7 @@ export default async function NewUserPage({
             type="text"
             name="name"
             required
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
@@ -44,7 +45,7 @@ export default async function NewUserPage({
             type="email"
             name="email"
             required
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
@@ -55,7 +56,7 @@ export default async function NewUserPage({
             name="password"
             required
             minLength={8}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
@@ -64,7 +65,7 @@ export default async function NewUserPage({
           <select
             name="role"
             defaultValue="engineer_l1"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           >
             {ROLES.map((role) => (
               <option key={role} value={role}>
@@ -76,7 +77,7 @@ export default async function NewUserPage({
 
         <button
           type="submit"
-          className="mt-2 self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="mt-2 self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
         >
           Crear usuario
         </button>

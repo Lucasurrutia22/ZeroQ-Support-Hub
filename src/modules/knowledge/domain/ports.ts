@@ -53,11 +53,26 @@ export interface ProcedureListFilter {
   search?: string;
 }
 
+export interface ProcedurePage {
+  items: ProcedureWithDetails[];
+  total: number;
+}
+
 export interface ProcedureRepository {
   create(input: CreateProcedureInput): Promise<ProcedureWithDetails>;
   findById(id: string): Promise<ProcedureWithDetails | null>;
   findBySlug(slug: string): Promise<ProcedureWithDetails | null>;
   list(filter: ProcedureListFilter): Promise<ProcedureWithDetails[]>;
+  /**
+   * Paginado — usado por el listado principal de Procedimientos (109+ filas
+   * y creciendo). `list()` sigue existiendo sin paginar para los llamadores
+   * que necesitan el total real (Bitácora contando por categoría, cola de
+   * revisión) — no cambiarle la semántica a esos.
+   */
+  listPaged(
+    filter: ProcedureListFilter,
+    pagination: { page: number; pageSize: number },
+  ): Promise<ProcedurePage>;
   slugExists(slug: string): Promise<boolean>;
   addVersion(params: {
     procedureId: string;

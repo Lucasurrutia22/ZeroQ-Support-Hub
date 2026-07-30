@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listProcedures } from "@/modules/knowledge/application/use-cases/procedures";
 import { canApproveProcedure } from "@/modules/knowledge/application/policies";
-import { approveProcedureAction, rejectProcedureAction } from "../actions";
+import { approveProcedureAction } from "../actions";
+import { RejectProcedureButton } from "../RejectProcedureButton";
 import { RISK_LABELS, RISK_BADGE_CLASSES, badgeClass, errorMessageFor } from "@/lib/knowledge-ui";
 
 export default async function ProcedureReviewQueuePage({
@@ -15,14 +17,7 @@ export default async function ProcedureReviewQueuePage({
   const role = session!.user.role;
 
   if (!canApproveProcedure(role)) {
-    return (
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Cola de revisión</h1>
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
-          No tienes acceso a esta sección.
-        </p>
-      </div>
-    );
+    redirect("/procedures");
   }
 
   const procedures = await listProcedures({ status: "in_review" });
@@ -73,14 +68,11 @@ export default async function ProcedureReviewQueuePage({
                   Aprobar
                 </button>
               </form>
-              <form action={rejectProcedureAction.bind(null, procedure.id, procedure.slug)}>
-                <button
-                  type="submit"
-                  className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800"
-                >
-                  Rechazar
-                </button>
-              </form>
+              <RejectProcedureButton
+                procedureId={procedure.id}
+                slug={procedure.slug}
+                title={procedure.title}
+              />
             </div>
           </li>
         ))}

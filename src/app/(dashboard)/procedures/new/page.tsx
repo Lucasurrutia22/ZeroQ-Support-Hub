@@ -1,8 +1,11 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listCategories } from "@/modules/knowledge/application/use-cases/categories";
 import { canCreateProcedure } from "@/modules/knowledge/application/policies";
 import { createProcedureAction } from "../actions";
 import { RISK_LABELS, errorMessageFor } from "@/lib/knowledge-ui";
+import { FORM_INPUT_CLASSES } from "@/lib/form-ui";
+import { ProcedureContentEditor } from "../ProcedureContentEditor";
 import type { RiskLevel } from "@/modules/knowledge/domain/types";
 
 const RISK_OPTIONS: RiskLevel[] = ["low", "medium", "high"];
@@ -17,14 +20,7 @@ export default async function NewProcedurePage({
   const role = session!.user.role;
 
   if (!canCreateProcedure(role)) {
-    return (
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Nuevo procedimiento</h1>
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
-          No tienes permiso para esta acción.
-        </p>
-      </div>
-    );
+    redirect("/procedures");
   }
 
   const categories = await listCategories();
@@ -57,7 +53,7 @@ export default async function NewProcedurePage({
             required
             minLength={3}
             maxLength={200}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
@@ -67,7 +63,7 @@ export default async function NewProcedurePage({
             name="categoryId"
             required
             defaultValue=""
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           >
             <option value="" disabled>
               Selecciona una categoría
@@ -86,7 +82,7 @@ export default async function NewProcedurePage({
             name="riskLevel"
             required
             defaultValue="low"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           >
             {RISK_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -102,19 +98,14 @@ export default async function NewProcedurePage({
             name="estimatedTimeMinutes"
             type="number"
             min={1}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           Contenido (Markdown)
-          <textarea
-            name="contentMarkdown"
-            required
-            rows={14}
-            className="rounded-md border border-slate-300 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950"
-          />
-        </label>
+          <ProcedureContentEditor name="contentMarkdown" rows={14} />
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           Tags (separados por coma, opcional)
@@ -122,13 +113,13 @@ export default async function NewProcedurePage({
             name="tagNames"
             type="text"
             placeholder="impresora, totem, red"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className={FORM_INPUT_CLASSES}
           />
         </label>
 
         <button
           type="submit"
-          className="mt-2 self-start rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="mt-2 self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
         >
           Crear procedimiento
         </button>

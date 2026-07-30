@@ -4,7 +4,9 @@ import { auth } from "@/auth";
 import { listUsers } from "@/modules/identity/application/use-cases/users";
 import { roleLabel, type Role } from "@/modules/identity/domain/role";
 import { ACTIVE_BADGE_CLASSES, badgeClass, errorMessageFor } from "@/lib/identity-ui";
-import { setUserActiveAction, setUserRoleAction } from "./actions";
+import { FORM_INPUT_COMPACT_CLASSES } from "@/lib/form-ui";
+import { setUserRoleAction } from "./actions";
+import { ToggleUserActiveButton } from "./ToggleUserActiveButton";
 
 const ROLES: Role[] = ["admin", "supervisor", "engineer_l1", "engineer_l2", "readonly"];
 
@@ -34,7 +36,7 @@ export default async function AdminPage({
         </div>
         <Link
           href="/admin/new"
-          className="shrink-0 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="shrink-0 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
         >
           Nuevo usuario
         </Link>
@@ -76,7 +78,7 @@ export default async function AdminPage({
                         name="role"
                         defaultValue={user.role}
                         disabled={isSelf}
-                        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+                        className={FORM_INPUT_COMPACT_CLASSES}
                       >
                         {ROLES.map((role) => (
                           <option key={role} value={role}>
@@ -105,14 +107,11 @@ export default async function AdminPage({
                   </td>
                   <td className="px-4 py-3">
                     {!isSelf ? (
-                      <form action={setUserActiveAction.bind(null, user.id, !user.active)}>
-                        <button
-                          type="submit"
-                          className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-900"
-                        >
-                          {user.active ? "Desactivar" : "Activar"}
-                        </button>
-                      </form>
+                      <ToggleUserActiveButton
+                        userId={user.id}
+                        userName={user.name}
+                        active={user.active}
+                      />
                     ) : (
                       <span className="text-xs text-slate-400">—</span>
                     )}
