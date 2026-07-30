@@ -23,6 +23,12 @@ export interface DocumentChunk {
 // existe en memoria durante el retrieval.
 export interface ScoredChunk extends DocumentChunk {
   score: number;
+  /**
+   * Similitud coseno (0-1) contra la búsqueda vectorial pura, null si esta
+   * fila solo apareció por full-text. Proxy de confianza pre-LLM (askAI:
+   * clasificación "quick" vs "deep") — no participa en el score de fusión.
+   */
+  vectorSimilarity: number | null;
 }
 
 // ScoredChunk + metadata de la fuente (Procedure) resuelta por
@@ -66,12 +72,19 @@ export interface SourceReference {
   url: string;
 }
 
+// Origen de una respuesta de asistente (solo en mensajes role="assistant"):
+// "cache" viene de AICachedAnswer sin llamar al LLM; "quick"/"deep" reflejan
+// la confianza del retrieval antes de llamar al LLM (ver askAI/PgVectorStore
+// vectorSimilarity). Espeja el enum Prisma AIAnswerOrigin.
+export type AIAnswerOrigin = "cache" | "quick" | "deep";
+
 export interface AIMessage {
   id: string;
   conversationId: string;
   role: AIMessageRole;
   content: string;
   sourceReferences: SourceReference[] | null;
+  answerOrigin: AIAnswerOrigin | null;
   createdAt: Date;
 }
 

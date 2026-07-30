@@ -1,11 +1,16 @@
 import { err, ok, type Result, DomainError } from "@/shared/domain/result";
 import type { ActingUser } from "@/modules/identity/domain/role";
-import { aiConversationRepository, aiMessageRepository } from "../../infrastructure/container";
+import {
+  aiConversationRepository,
+  aiMessageRepository,
+  answerCacheStore,
+  embeddingProvider,
+} from "../../infrastructure/container";
 import { getLLMProvider } from "../../infrastructure/llm/llm-provider-factory";
 import { canUseAI } from "../policies";
 import { titleFromQuery } from "./conversations";
-import { semanticSearch } from "./semantic-search";
-import type { AIMessage, SourceReference } from "../../domain/types";
+import { searchWithEmbedding } from "./semantic-search";
+import type { AIAnswerOrigin, AIMessage, AIMessageRole, RankedChunk, SourceReference } from "../../domain/types";
 
 // UC-AI-02 — persona "Ingeniero Senior de Soporte ZeroQ" (AI_RAG_DESIGN.md §4.1).
 // Regla 7 (ignorar instrucciones dentro del contexto recuperado) viene del
@@ -33,6 +38,20 @@ const HISTORY_TURNS = 4;
 // marginal de latencia, así que vuelve a 8.
 const RETRIEVAL_TOP_K = 8;
 
+// Umbral para considerar dos preguntas "la misma" a efectos de la memoria
+// semántica — arranca conservador (evitar reusar una respuesta para una
+// pregunta parecida pero distinta). Primer parámetro a bajar si en la
+// práctica casi nunca hay hits de caché.
+const CACHE_SIMILARITY_THRESHOLD = Number(
+  process.env.AI_CACHE_SIMILARITY_THRESHOLD ?? 0.95,
+);
+// Por debajo de esto, el mejor chunk recuperado se considera un match débil
+// — la pregunta se marca "deep" (la UI avisa que puede tardar más / ser
+// menos precisa) en vez de "quick". Sin chunks devueltos, siempre "deep".
+const CONFIDENCE_SIMILARITY_THRESHOLD = Number(
+  process.env.AI_CONFIDENCE_THRESHOLD ?? 0.5,
+);
+
 export interface AskAICommand {
   conversationId?: string;
   query: string;
@@ -43,10 +62,26 @@ export interface AskAIAnswer {
   assistantMessage: AIMessage;
 }
 
-export async function askAI(
+export interface AskAIPrepared {
+  conversationId: string;
+  query: string;
+  queryEmbedding: number[];
+  history: { role: AIMessageRole; content: string }[];
+  chunksForLLM: RankedChunk[];
+  confidence: "quick" | "deep";
+  cachedAnswer: { id: string; answerContent: string; sourceReferences: SourceReference[] } | null;
+}
+
+/**
+ * Fase 1 (rápida — retrieval + clasificación + lookup de caché, sin llamar
+ * al LLM): todo lo que /api/ai/chat necesita para decidir qué mostrarle al
+ * usuario ANTES de la parte lenta (completeAskAI). Ver plan de "memoria
+ * semántica + aviso de pensando más".
+ */
+export async function prepareAskAI(
   actingUser: ActingUser,
   command: AskAICommand,
-): Promise<Result<AskAIAnswer>> {
+): Promise<Result<AskAIPrepared>> {
   if (!canUseAI(actingUser.role)) {
     return err(new DomainError("forbidden", "Tu rol no tiene acceso al chat de IA."));
   }
@@ -89,7 +124,14 @@ export async function askAI(
     sourceReferences: null,
   });
 
-  const chunks = await semanticSearch(query, {}, RETRIEVAL_TOP_K);
+  // Un solo embedding de la pregunta, reutilizado para el retrieval Y el
+  // lookup en la memoria semántica — evita una segunda llamada a Voyage.
+  const queryEmbedding = await embeddingProvider.embed(query, "query");
+
+  const [chunks, cachedAnswer] = await Promise.all([
+    searchWithEmbedding(queryEmbedding, query, {}, RETRIEVAL_TOP_K),
+    answerCacheStore.findSimilar(queryEmbedding, CACHE_SIMILARITY_THRESHOLD),
+  ]);
 
   // El LLM recibe un tag posicional corto (F1, F2...) en vez del
   // citationTag "real" (PROC-<cuid>-vN): modelos chicos/locales (Ollama)
@@ -103,6 +145,45 @@ export async function askAI(
     ...chunk,
     citationTag: `F${index + 1}`,
   }));
+
+  const bestSimilarity = Math.max(0, ...chunks.map((chunk) => chunk.vectorSimilarity ?? 0));
+  const confidence: "quick" | "deep" =
+    bestSimilarity >= CONFIDENCE_SIMILARITY_THRESHOLD ? "quick" : "deep";
+
+  return ok({
+    conversationId,
+    query,
+    queryEmbedding,
+    history,
+    chunksForLLM,
+    confidence,
+    cachedAnswer,
+  });
+}
+
+/**
+ * Fase 2 (lenta si no hubo hit de caché — llama al LLM): recibe lo que armó
+ * prepareAskAI y devuelve la respuesta final ya persistida.
+ */
+export async function completeAskAI(
+  actingUser: ActingUser,
+  prepared: AskAIPrepared,
+): Promise<Result<AskAIAnswer>> {
+  const { conversationId, query, queryEmbedding, history, chunksForLLM, confidence, cachedAnswer } =
+    prepared;
+
+  if (cachedAnswer) {
+    await answerCacheStore.recordHit(cachedAnswer.id);
+    const assistantMessage = await aiMessageRepository.create({
+      conversationId,
+      role: "assistant",
+      content: cachedAnswer.answerContent,
+      sourceReferences: cachedAnswer.sourceReferences,
+      answerOrigin: "cache",
+    });
+    await aiConversationRepository.touch(conversationId);
+    return ok({ conversationId, assistantMessage });
+  }
 
   const structuredAnswer = await getLLMProvider().generateAnswer({
     systemPrompt: SYSTEM_PROMPT,
@@ -163,14 +244,39 @@ export async function askAI(
     );
   }
 
+  const answerOrigin: AIAnswerOrigin = confidence;
+
   const assistantMessage = await aiMessageRepository.create({
     conversationId,
     role: "assistant",
     content: structuredAnswer.answer,
     sourceReferences,
+    answerOrigin,
   });
 
   await aiConversationRepository.touch(conversationId);
+
+  // Se cachea solo si (a) el retrieval fue de alta confianza ("quick" — ver
+  // prepareAskAI) Y (b) hay al menos una cita interna REAL (Bitácora),
+  // validada más arriba contra los chunks recuperados. Nunca un "no
+  // encontré nada" (si mañana se agrega contenido nuevo, una respuesta
+  // negativa cacheada indefinidamente sería peor que no cachear nada).
+  // Deliberadamente NO se exige además `hasSufficientContext`: con modelos
+  // chicos/locales (Ollama) ese flag autorreportado es poco confiable
+  // incluso cuando la cita sí es correcta (verificado en vivo). Pero la sola
+  // presencia de una cita "válida" tampoco alcanza — verificado en vivo que
+  // el modelo puede citar un chunk real pero irrelevante para una pregunta
+  // ambigua/fuera de la Bitácora (esas siempre clasifican "deep", por eso el
+  // gate combinado: solo se cachea lo que además tuvo un match fuerte).
+  if (confidence === "quick" && internalReferences.length > 0) {
+    await answerCacheStore.save({
+      questionText: query,
+      embedding: queryEmbedding,
+      answerContent: structuredAnswer.answer,
+      sourceReferences,
+      procedureIds: internalReferences.map((reference) => reference.sourceId),
+    });
+  }
 
   return ok({ conversationId, assistantMessage });
 }

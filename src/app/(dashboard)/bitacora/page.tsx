@@ -45,6 +45,13 @@ export default async function BitacoraPage() {
           más), organizados por tema — {totalCount} procedimientos en {subcategories.length}{" "}
           categorías.
         </p>
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          Se completa a mano en Procedimientos o automáticamente al{" "}
+          <Link href="/documents/upload" className="underline hover:text-slate-600 dark:hover:text-slate-300">
+            subir un documento
+          </Link>{" "}
+          en una de estas categorías.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

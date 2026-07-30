@@ -14,10 +14,22 @@ export async function semanticSearch(
   topK = 8,
 ): Promise<RankedChunk[]> {
   const queryEmbedding = await embeddingProvider.embed(query, "query");
+  return searchWithEmbedding(queryEmbedding, query, filters, topK);
+}
 
+// Variante que recibe el embedding ya calculado — askAI la usa (vía
+// prepareAskAI) para no volver a llamar a Voyage: el mismo embedding de la
+// pregunta sirve tanto para este retrieval como para el lookup en la memoria
+// semántica del chat (AnswerCacheStore.findSimilar).
+export async function searchWithEmbedding(
+  queryEmbedding: number[],
+  queryText: string,
+  filters: SearchFilters = {},
+  topK = 8,
+): Promise<RankedChunk[]> {
   const scored = await vectorStore.hybridSearch({
     queryEmbedding,
-    queryText: query,
+    queryText,
     topK,
     filters,
   });

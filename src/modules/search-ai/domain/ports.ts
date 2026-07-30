@@ -3,6 +3,7 @@
 // nunca importan un SDK de IA ni Prisma directamente.
 
 import type {
+  AIAnswerOrigin,
   AIConversation,
   AIConversationWithMessages,
   AIMessage,
@@ -59,12 +60,26 @@ export interface GenerateAnswerInput {
   history: { role: AIMessageRole; content: string }[];
 }
 
+export interface SummarizeDocumentInput {
+  title: string;
+  /** Texto ya extraído del archivo (PDF/TXT/MD) — el provider nunca ve el binario. */
+  rawText: string;
+}
+
+export interface SummarizeDocumentOutput {
+  contentMarkdown: string;
+}
+
 // LLM — el port que debe poder apuntar a Claude, OpenAI, Ollama o Azure
 // OpenAI sin que AskAIUseCase sepa cuál está activo (pedido explícito del
-// usuario). Un solo método: recibe el contexto ya recuperado y arma la
-// respuesta estructurada (AskAIStructuredAnswer, AI_RAG_DESIGN.md §4.2).
+// usuario). `generateAnswer` arma la respuesta estructurada del chat
+// (AskAIStructuredAnswer, AI_RAG_DESIGN.md §4.2); `summarizeDocument` es un
+// segundo uso del mismo LanguageModel swappable, para la ingesta automática
+// de documentos a Bitácora (texto crudo → Markdown resumido, sin tools ni
+// salida estructurada — no necesita el mismo aparato que el chat).
 export interface LLMProvider {
   generateAnswer(input: GenerateAnswerInput): Promise<AskAIStructuredAnswer>;
+  summarizeDocument(input: SummarizeDocumentInput): Promise<SummarizeDocumentOutput>;
 }
 
 export interface WebSearchResult {
@@ -96,10 +111,39 @@ export interface AIMessageRepository {
     role: AIMessageRole;
     content: string;
     sourceReferences: SourceReference[] | null;
+    answerOrigin?: AIAnswerOrigin | null;
   }): Promise<AIMessage>;
   listByConversation(conversationId: string): Promise<AIMessage[]>;
   /** Últimos N turnos, más recientes primero — para historial conversacional (§6.2). */
   listRecentByConversation(conversationId: string, limit: number): Promise<AIMessage[]>;
+}
+
+export interface CachedAnswer {
+  id: string;
+  answerContent: string;
+  sourceReferences: SourceReference[];
+}
+
+export interface SaveCachedAnswerInput {
+  questionText: string;
+  embedding: number[];
+  answerContent: string;
+  sourceReferences: SourceReference[];
+  /** Procedures citados en la respuesta — permite invalidar por Procedure editado/depreciado. */
+  procedureIds: string[];
+}
+
+// Memoria semántica del chat (AICachedAnswer) — un caché de preguntas/
+// respuestas ya resueltas, para no volver a llamar al LLM (el cuello de
+// botella real de latencia) ante una pregunta prácticamente igual a una ya
+// respondida. Ver ask-ai.ts (prepareAskAI/completeAskAI) y PgAnswerCacheStore.
+export interface AnswerCacheStore {
+  /** null si no hay ninguna entrada con similitud >= minSimilarity (o está vencida por TTL). */
+  findSimilar(embedding: number[], minSimilarity: number): Promise<CachedAnswer | null>;
+  save(input: SaveCachedAnswerInput): Promise<void>;
+  recordHit(id: string): Promise<void>;
+  /** Borra toda entrada de caché que cite este Procedure (edición/depreciación de contenido). */
+  invalidateByProcedureId(procedureId: string): Promise<void>;
 }
 
 export function withMessages(

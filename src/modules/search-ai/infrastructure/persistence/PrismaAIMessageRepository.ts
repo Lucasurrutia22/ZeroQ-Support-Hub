@@ -1,6 +1,6 @@
 import { prisma } from "@/shared/infrastructure/prisma/client";
 import type { AIMessageRepository } from "@/modules/search-ai/domain/ports";
-import type { AIMessage, SourceReference } from "@/modules/search-ai/domain/types";
+import type { AIAnswerOrigin, AIMessage, SourceReference } from "@/modules/search-ai/domain/types";
 import type { Prisma } from "../../../../../generated/prisma/client";
 
 function mapMessage(row: {
@@ -9,6 +9,7 @@ function mapMessage(row: {
   role: string;
   content: string;
   sourceReferences: Prisma.JsonValue;
+  answerOrigin: string | null;
   createdAt: Date;
 }): AIMessage {
   return {
@@ -20,6 +21,7 @@ function mapMessage(row: {
     // lo garantiza este mismo repositorio al escribir (create()), nunca
     // input externo sin validar.
     sourceReferences: (row.sourceReferences as SourceReference[] | null) ?? null,
+    answerOrigin: (row.answerOrigin as AIAnswerOrigin | null) ?? null,
     createdAt: row.createdAt,
   };
 }
@@ -30,6 +32,7 @@ export class PrismaAIMessageRepository implements AIMessageRepository {
     role: AIMessage["role"];
     content: string;
     sourceReferences: SourceReference[] | null;
+    answerOrigin?: AIAnswerOrigin | null;
   }): Promise<AIMessage> {
     const row = await prisma.aIMessage.create({
       data: {
@@ -37,6 +40,7 @@ export class PrismaAIMessageRepository implements AIMessageRepository {
         role: input.role,
         content: input.content,
         sourceReferences: (input.sourceReferences ?? undefined) as Prisma.InputJsonValue | undefined,
+        answerOrigin: input.answerOrigin ?? undefined,
       },
     });
     return mapMessage(row);

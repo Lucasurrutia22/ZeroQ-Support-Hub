@@ -9,6 +9,7 @@ import {
 import type { DocumentListFilter } from "../../domain/ports";
 import type { Document, DocumentFileType } from "../../domain/types";
 import { canUploadDocument } from "../policies";
+import { ingestDocumentAsBitacoraEntry } from "./bitacora-auto-ingest";
 
 export interface UploadDocumentCommand {
   title: string;
@@ -66,6 +67,23 @@ export async function uploadDocument(
     storageKey,
     uploadedBy: actingUser.id,
     supersedesId: command.supersedesId ?? null,
+  });
+
+  // Fire-and-forget (mismo patrón que ContentIndexerAdapter.indexAsync): si
+  // la categoría es de Bitácora, genera un Procedure resumido por IA en
+  // segundo plano — no bloquea ni hace fallar esta subida si el documento no
+  // es elegible, no se puede extraer texto, o el LLM activo falla.
+  void ingestDocumentAsBitacoraEntry(
+    actingUser,
+    document,
+    command.fileBuffer,
+    command.fileName,
+  ).then((result) => {
+    if (!result.ok) {
+      console.error(
+        `[knowledge] No se generó Bitácora automática para el documento ${document.id}: ${result.error.code} — ${result.error.message}`,
+      );
+    }
   });
 
   return ok(document);

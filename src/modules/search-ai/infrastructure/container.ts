@@ -1,4 +1,5 @@
 import { VoyageEmbeddingProvider } from "./embeddings/VoyageEmbeddingProvider";
+import { PgAnswerCacheStore } from "./persistence/PgAnswerCacheStore";
 import { PgVectorStore } from "./persistence/PgVectorStore";
 import { PrismaAIConversationRepository } from "./persistence/PrismaAIConversationRepository";
 import { PrismaAIMessageRepository } from "./persistence/PrismaAIMessageRepository";
@@ -13,6 +14,7 @@ import { TavilyWebSearchProvider } from "./websearch/TavilyWebSearchProvider";
 // nunca al importar el módulo — ver ese archivo para el porqué).
 export const embeddingProvider = new VoyageEmbeddingProvider();
 export const vectorStore = new PgVectorStore();
+export const answerCacheStore = new PgAnswerCacheStore();
 export const aiConversationRepository = new PrismaAIConversationRepository();
 export const aiMessageRepository = new PrismaAIMessageRepository();
 export const sourceContentReader = new PrismaSourceContentReader();

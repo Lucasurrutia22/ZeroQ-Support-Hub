@@ -8,9 +8,9 @@ import { DOCUMENT_FILE_TYPE_LABELS, errorMessageFor } from "@/lib/knowledge-ui";
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; bitacoraQueued?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, bitacoraQueued } = await searchParams;
   const session = await auth();
   const role = session!.user.role;
 
@@ -34,7 +34,7 @@ export default async function DocumentsPage({
         {canUpload ? (
           <Link
             href="/documents/upload"
-            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
           >
             Subir documento
           </Link>
@@ -44,6 +44,20 @@ export default async function DocumentsPage({
       {errorMessage ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
           {errorMessage}
+        </p>
+      ) : null}
+
+      {bitacoraQueued ? (
+        <p className="flex items-start gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+          <span aria-hidden>✓</span>
+          <span>
+            Documento subido. Como pertenece a Bitácora de Tótems, la IA ya está generando un
+            resumen — en unos segundos vas a verlo en{" "}
+            <Link href="/procedures/review" className="font-medium underline">
+              Procedimientos en revisión
+            </Link>
+            .
+          </span>
         </p>
       ) : null}
 

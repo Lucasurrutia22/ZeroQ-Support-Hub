@@ -270,6 +270,16 @@ enum AIMessageRole {
   assistant
 }
 
+// Origen de una respuesta de asistente: "cache" (memoria semántica,
+// AICachedAnswer, sin llamar al LLM), "quick" (match interno fuerte) o
+// "deep" (match débil/ambiguo — la UI se lo marca al usuario como análisis
+// más profundo). Null en mensajes role=user. Ver ask-ai.ts.
+enum AIAnswerOrigin {
+  cache
+  quick
+  deep
+}
+
 // Historial de conversaciones con la IA (distinto de `ViewHistory`, que es
 // historial de páginas vistas — ver AI_RAG_DESIGN.md §6). Privado por
 // usuario: no hay query "ver conversaciones de otro usuario" en este alcance.
@@ -295,9 +305,47 @@ model AIMessage {
   // null en mensajes role=user, obligatorio en mensajes role=assistant que
   // citan contexto (invariante de trazabilidad, ver AI_RAG_DESIGN.md §4.3).
   sourceReferences Json?
+  // Solo en mensajes role=assistant — ver enum AIAnswerOrigin.
+  answerOrigin     AIAnswerOrigin?
   createdAt        DateTime      @default(now())
 
   conversation AIConversation @relation(fields: [conversationId], references: [id])
 
   @@index([conversationId])
+}
+
+// Memoria semántica del asistente de IA: respuestas ya generadas y
+// consideradas confiables (hasSufficientContext=true + al menos una cita
+// interna, ver askAI), indexadas por el embedding de la PREGUNTA que las
+// originó — no del contenido de Bitácora (eso ya lo indexa DocumentChunk).
+// Un query nuevo con embedding muy similar a `questionText` reusa
+// `answerContent` en vez de volver a llamar al LLM (el cuello de botella real
+// de latencia, ver AI_RAG_DESIGN.md/memoria del proyecto sobre Ollama).
+model AICachedAnswer {
+  id               String   @id @default(cuid())
+  questionText     String   @db.Text
+  // Nullable a nivel Prisma por la misma razón que DocumentChunk.embedding:
+  // se completa vía $executeRaw en PgAnswerCacheStore.save(), nunca queda
+  // una fila sin embedding en reposo.
+  embedding        Unsupported("halfvec(1024)")?
+  answerContent    String   @db.Text
+  sourceReferences Json
+  hitCount         Int      @default(0)
+  createdAt        DateTime @default(now())
+  lastHitAt        DateTime @default(now())
+
+  citations AICachedAnswerCitation[]
+}
+
+// Qué Procedures respaldan una respuesta cacheada — permite invalidar por
+// Procedure editado/depreciado sin tener que escanear el JSON de citas
+// (ver editProcedureContent/deprecateProcedure en knowledge/procedures.ts).
+model AICachedAnswerCitation {
+  id             String @id @default(cuid())
+  cachedAnswerId String
+  procedureId    String
+
+  cachedAnswer AICachedAnswer @relation(fields: [cachedAnswerId], references: [id], onDelete: Cascade)
+
+  @@index([procedureId])
 }

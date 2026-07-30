@@ -7,6 +7,7 @@ import {
 } from "@/modules/search-ai/application/use-cases/conversations";
 import { ConversationSidebar } from "@/components/ai/ConversationSidebar";
 import { AIChatClient, type ChatMessage } from "@/components/ai/AIChatClient";
+import { initialsFor } from "@/lib/ai-ui";
 
 // UC-AI-02 — misma defensa en profundidad que /ai/page.tsx para Solo Lectura.
 export default async function AIConversationPage({
@@ -46,14 +47,22 @@ export default async function AIConversationPage({
     role: message.role,
     content: message.content,
     sourceReferences: message.sourceReferences,
+    answerOrigin: message.answerOrigin,
+    createdAt: message.createdAt,
   }));
 
   return (
     <div className="flex h-full min-h-0 gap-6">
       <ConversationSidebar conversations={conversations} activeConversationId={conversationId} />
       <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <h1 className="truncate text-2xl font-semibold">{conversationResult.value.title}</h1>
-        <AIChatClient conversationId={conversationId} initialMessages={initialMessages} />
+        <h1 className="truncate text-xl font-semibold text-slate-900 dark:text-slate-100">
+          {conversationResult.value.title}
+        </h1>
+        <AIChatClient
+          conversationId={conversationId}
+          initialMessages={initialMessages}
+          userInitials={initialsFor(session!.user.name ?? session!.user.email ?? "TÚ")}
+        />
       </div>
     </div>
   );

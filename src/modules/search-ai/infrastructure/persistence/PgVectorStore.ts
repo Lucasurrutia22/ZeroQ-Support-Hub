@@ -7,6 +7,7 @@ import type {
   NewChunkInput,
   VectorStore,
 } from "@/modules/search-ai/domain/ports";
+import { toHalfvecLiteral } from "./halfvec";
 
 // pgvector sobre el mismo Postgres (D1) — único lugar del proyecto que
 // escribe SQL raw contra `DocumentChunk`. Todo parámetro variable (embedding,
@@ -28,10 +29,11 @@ interface RawChunkRow {
   content: string;
   chunkIndex: number;
   categoryId: string | null;
-}
-
-function toHalfvecLiteral(embedding: number[]): string {
-  return `[${embedding.join(",")}]`;
+  // Solo viene poblado en las filas de la query vectorial (vectorRows) — las
+  // de full-text (textRows) no tienen una distancia coseno que reportar.
+  // Usado como proxy de confianza pre-LLM (askAI: clasificación quick/deep),
+  // no participa en absoluto en la fusión RRF de más abajo.
+  similarity?: number;
 }
 
 function buildFilterClause(filters: HybridSearchInput["filters"]): Prisma.Sql {
@@ -81,7 +83,8 @@ export class PgVectorStore implements VectorStore {
 
     const [vectorRows, textRows] = await Promise.all([
       prisma.$queryRaw<RawChunkRow[]>`
-        SELECT id, "sourceType", "sourceId", content, "chunkIndex", "categoryId"
+        SELECT id, "sourceType", "sourceId", content, "chunkIndex", "categoryId",
+          1 - (embedding <=> ${vectorLiteral}::halfvec(1024)) AS similarity
         FROM "DocumentChunk"
         WHERE true ${filterClause}
         ORDER BY embedding <=> ${vectorLiteral}::halfvec(1024)
@@ -110,7 +113,10 @@ function fuseRankedLists(vectorRows: RawChunkRow[], textRows: RawChunkRow[]): Sc
 
   function accumulate(rows: RawChunkRow[]) {
     rows.forEach((row, index) => {
-      rowById.set(row.id, row);
+      // vectorRows corre primero (ver Promise.all de arriba) — si textRows
+      // también trae esta fila, no debe pisar el `similarity` ya seteado.
+      const existing = rowById.get(row.id);
+      rowById.set(row.id, existing ? { ...row, similarity: existing.similarity } : row);
       const rank = index + 1;
       const previous = scores.get(row.id) ?? 0;
       scores.set(row.id, previous + 1 / (RRF_K + rank));
@@ -124,7 +130,7 @@ function fuseRankedLists(vectorRows: RawChunkRow[], textRows: RawChunkRow[]): Sc
     .map(([id, score]) => {
       const row = rowById.get(id);
       if (!row) throw new Error("Fila de document_chunks perdida durante la fusión RRF");
-      return { ...row, score };
+      return { ...row, score, vectorSimilarity: row.similarity ?? null };
     })
     .sort((a, b) => b.score - a.score);
 }

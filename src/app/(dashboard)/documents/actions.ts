@@ -6,6 +6,7 @@ import { ZodError } from "zod";
 import { getActingUserOrThrow } from "@/modules/identity/application/get-acting-user";
 import { uploadDocumentMetadataSchema } from "@/lib/schemas/knowledge";
 import { uploadDocument } from "@/modules/knowledge/application/use-cases/documents";
+import { isBitacoraCategory } from "@/modules/knowledge/application/use-cases/bitacora-auto-ingest";
 
 export async function uploadDocumentAction(formData: FormData) {
   const actingUser = await getActingUserOrThrow();
@@ -45,5 +46,18 @@ export async function uploadDocumentAction(formData: FormData) {
   }
 
   revalidatePath("/documents");
+
+  const bitacoraEligible = await isBitacoraCategory(metadata.categoryId);
+  if (bitacoraEligible) {
+    // La generación del Procedure ocurre en segundo plano (ver
+    // ingestDocumentAsBitacoraEntry) — se revalidan estas rutas igual porque
+    // el próximo request a /bitacora o /procedures/review normalmente ya la
+    // encuentra lista (extracción + resumen suelen tardar segundos, no
+    // minutos, salvo PDFs muy grandes).
+    revalidatePath("/bitacora");
+    revalidatePath("/procedures/review");
+    redirect("/documents?bitacoraQueued=1");
+  }
+
   redirect("/documents");
 }

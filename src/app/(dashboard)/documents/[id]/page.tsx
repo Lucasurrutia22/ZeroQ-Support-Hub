@@ -56,7 +56,7 @@ export default async function DocumentDetailPage({
           href={downloadUrlResult.value}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="inline-flex rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
         >
           Descargar
         </a>

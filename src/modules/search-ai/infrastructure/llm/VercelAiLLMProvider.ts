@@ -3,8 +3,31 @@ import { z } from "zod";
 import type {
   GenerateAnswerInput,
   LLMProvider,
+  SummarizeDocumentInput,
+  SummarizeDocumentOutput,
 } from "@/modules/search-ai/domain/ports";
 import { webSearchProvider } from "@/modules/search-ai/infrastructure/container";
+
+// Instrucciones para la ingesta automática de Documentación → Bitácora
+// (documents/actions.ts → bitacora-auto-ingest.ts): un solo turno, sin
+// tools, sin salida estructurada — el documento ya es la única fuente, no
+// hace falta el aparato de citas/RAG del chat. Le pide explícitamente que
+// use bloques de código para comandos porque `command-annotations.ts` (guía
+// "dónde ejecutar cada comando" de Procedimientos) parsea Markdown en busca
+// de fences, no de texto libre.
+const SUMMARIZE_DOCUMENT_INSTRUCTIONS = `Eres un ingeniero de soporte técnico que convierte manuales/documentos técnicos en una entrada de Bitácora clara y accionable, en español.
+
+Reglas:
+- Basate únicamente en el texto provisto. Nunca inventes pasos, comandos o datos que no estén en el documento.
+- Si el documento no tiene procedimientos operativos claros (es solo información de referencia), igual generá un resumen útil de su contenido.
+- Formato Markdown plano (sin HTML). Estructura sugerida:
+  ## Resumen
+  1-3 frases con el propósito del documento.
+  ## Procedimiento
+  Pasos numerados si el documento describe una secuencia de acciones. Cualquier comando literal (shell, SQL, etc.) va en un bloque de código con triple backtick.
+  ## Notas
+  Advertencias, prerrequisitos o datos importantes mencionados en el documento (opcional, omitir la sección si no aplica).
+- Sé conciso: preferí una lista clara antes que párrafos largos.`;
 
 // Salida estructurada obligatoria (AI_RAG_DESIGN.md §4.2) — el mismo schema
 // sin importar qué LanguageModel esté detrás (Claude/OpenAI/Ollama/Azure
@@ -115,5 +138,15 @@ export class VercelAiLLMProvider implements LLMProvider {
         realWebResultUrls.has(source.url),
       ),
     };
+  }
+
+  async summarizeDocument(input: SummarizeDocumentInput): Promise<SummarizeDocumentOutput> {
+    const { text } = await generateText({
+      model: this.model,
+      instructions: SUMMARIZE_DOCUMENT_INSTRUCTIONS,
+      prompt: `Título del documento: ${input.title}\n\nTexto extraído del documento:\n${input.rawText}`,
+    });
+
+    return { contentMarkdown: text.trim() };
   }
 }
