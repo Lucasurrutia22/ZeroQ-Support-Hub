@@ -65,13 +65,15 @@ cubre exclusivamente la puesta en marcha del proyecto.
 | `@ai-sdk/anthropic` | 4.0.18 | Proveedor Anthropic (Claude) |
 | `@ai-sdk/openai` | 4.0.19 | Proveedor OpenAI |
 | `@ai-sdk/azure` | 4.0.20 | Proveedor Azure OpenAI |
-| `ollama-ai-provider-v2` | 4.0.1 | Proveedor Ollama (autoalojado, solo desarrollo) |
+| `@ai-sdk/groq` | 4.0.17 | Proveedor Groq — nivel gratis real, alcanzable desde Vercel (recomendado para producción sin costo) |
+| `ollama-ai-provider-v2` | 4.0.1 | Proveedor Ollama (autoalojado — solo desarrollo local, no alcanzable desde Vercel) |
 | `@ai-sdk/voyage` | 2.0.12 | Proveedor de embeddings — Voyage AI (`voyage-4-lite`, 1024 dimensiones, fijo) |
 | `@tavily/core` | 0.7.6 | Búsqueda web para el asistente (tool-calling) |
 
 > El proveedor de LLM es intercambiable en tiempo de ejecución mediante la variable de entorno
-> `LLM_PROVIDER`, sin modificar código. El proveedor de embeddings es fijo por decisión de diseño
-> (cambiarlo exige reprocesar el corpus completo).
+> `LLM_PROVIDER` (`anthropic` | `openai` | `azure-openai` | `groq` | `ollama`), sin modificar
+> código. El proveedor de embeddings es fijo por decisión de diseño (cambiarlo exige reprocesar el
+> corpus completo).
 
 ### Procesamiento de documentos
 
@@ -262,7 +264,10 @@ Contraseña única para los cinco usuarios de demostración: **`ZeroQ.Demo123`**
    al empleado en desarrollo.
 3. **`LLM_PROVIDER=ollama` no es funcional en Vercel**: Ollama se ejecuta localmente y las
    funciones serverless de Vercel no pueden acceder a él. En producción debe utilizarse
-   `anthropic`, `openai` o `azure-openai`, junto con la credencial correspondiente.
+   `anthropic`, `openai`, `azure-openai` o `groq`, junto con la credencial correspondiente.
+   **Groq** es la opción recomendada si se busca evitar costo: tiene nivel gratuito real
+   (sin tarjeta) y es alcanzable desde Vercel — bastan `LLM_PROVIDER="groq"` y
+   `GROQ_API_KEY` (obtenida en [console.groq.com/keys](https://console.groq.com/keys)).
 4. El comando `npm run build` ejecuta `next build`; el cliente de Prisma se regenera
    automáticamente mediante el script `postinstall`.
 5. La preparación de la base de datos (pasos 1 a 6 de la sección anterior) se realiza una única

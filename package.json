@@ -15,6 +15,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.18",
     "@ai-sdk/azure": "^4.0.20",
+    "@ai-sdk/groq": "^4.0.17",
     "@ai-sdk/openai": "^4.0.19",
     "@ai-sdk/voyage": "^2.0.12",
     "@prisma/adapter-pg": "^7.9.0",

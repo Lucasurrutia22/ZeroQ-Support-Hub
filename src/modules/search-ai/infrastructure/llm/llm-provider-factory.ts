@@ -1,6 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAzure } from "@ai-sdk/azure";
+import { createGroq } from "@ai-sdk/groq";
 import { createOllama } from "ollama-ai-provider-v2";
 import type { LanguageModel } from "ai";
 import type { LLMProvider } from "@/modules/search-ai/domain/ports";
@@ -8,12 +9,18 @@ import { VercelAiLLMProvider } from "./VercelAiLLMProvider";
 
 // Este archivo es TODO lo que hay que tocar para cambiar de proveedor de LLM
 // (pedido explícito: "no debe depender de un proveedor específico" — Claude,
-// OpenAI, Ollama, Azure OpenAI intercambiables por configuración, sin tocar
-// AskAIUseCase ni el resto de search-ai). Los 4 SDKs (@ai-sdk/anthropic,
-// @ai-sdk/openai, @ai-sdk/azure, ollama-ai-provider-v2) exponen todos un
-// `LanguageModel` (spec LanguageModelV2) — VercelAiLLMProvider es un único
-// adapter que no sabe ni le importa cuál de los cuatro está detrás.
-export type LLMProviderName = "anthropic" | "openai" | "azure-openai" | "ollama";
+// OpenAI, Ollama, Azure OpenAI, Groq intercambiables por configuración, sin
+// tocar AskAIUseCase ni el resto de search-ai). Los 5 SDKs (@ai-sdk/anthropic,
+// @ai-sdk/openai, @ai-sdk/azure, @ai-sdk/groq, ollama-ai-provider-v2) exponen
+// todos un `LanguageModel` (spec LanguageModelV2) — VercelAiLLMProvider es un
+// único adapter que no sabe ni le importa cuál está detrás.
+//
+// Groq se agregó como alternativa gratuita para producción: Ollama no es
+// alcanzable desde funciones serverless de Vercel (corre en la máquina local
+// del usuario), y Anthropic/OpenAI requieren facturación — Groq tiene nivel
+// gratis real (límites por minuto/día, sin tarjeta) sirviendo modelos
+// abiertos (Llama, gpt-oss) en hardware propio de muy baja latencia.
+export type LLMProviderName = "anthropic" | "openai" | "azure-openai" | "groq" | "ollama";
 
 const DEFAULT_MODEL_BY_PROVIDER: Record<LLMProviderName, string> = {
   // Defaults razonables al momento de escribir esto — verificar contra la
@@ -24,6 +31,11 @@ const DEFAULT_MODEL_BY_PROVIDER: Record<LLMProviderName, string> = {
   anthropic: "claude-sonnet-4-5",
   openai: "gpt-5",
   "azure-openai": "gpt-4o",
+  // "llama-3.3-70b-versatile" (el default más común en ejemplos de Groq) se
+  // da de baja el 2026-08-16 — se usa directamente el reemplazo recomendado
+  // por Groq (gpt-oss-120b, modelo abierto de OpenAI, soporta tool-calling)
+  // para no heredar una fecha de vencimiento a dos semanas de escribir esto.
+  groq: "openai/gpt-oss-120b",
   ollama: "llama3.2",
 };
 
@@ -39,7 +51,7 @@ function requireEnv(name: string): string {
 
 function resolveProviderName(): LLMProviderName {
   const raw = process.env.LLM_PROVIDER ?? "anthropic";
-  const valid: LLMProviderName[] = ["anthropic", "openai", "azure-openai", "ollama"];
+  const valid: LLMProviderName[] = ["anthropic", "openai", "azure-openai", "groq", "ollama"];
   if (!valid.includes(raw as LLMProviderName)) {
     throw new Error(
       `LLM_PROVIDER="${raw}" no es válido. Valores soportados: ${valid.join(", ")}.`,
@@ -70,6 +82,10 @@ function buildLanguageModel(providerName: LLMProviderName): LanguageModel {
       // LLM_MODEL si ambos están seteados, porque un deployment es siempre
       // más específico que un id de modelo genérico.
       return azure(process.env.AZURE_OPENAI_DEPLOYMENT || modelId);
+    }
+    case "groq": {
+      const groq = createGroq({ apiKey: requireEnv("GROQ_API_KEY") });
+      return groq(modelId);
     }
     case "ollama": {
       const ollama = createOllama({
