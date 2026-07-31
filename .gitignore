@@ -27,3 +27,26 @@ next-env.d.ts
 
 # prisma generated client
 /generated
+
+# skills genéricas de tooling del agente (no son código/documentación del
+# proyecto) — solo se versionan las skills zeroq-* dentro de .claude/skills/
+/.agents/
+/.claude/skills/documentation/
+/.claude/skills/find-docs/
+/.claude/skills/n8n-agents/
+/.claude/skills/n8n-code-javascript/
+/.claude/skills/n8n-error-handling/
+/.claude/skills/n8n-self-hosting/
+/.claude/skills/n8n-workflow-patterns/
+/.claude/skills/pgvector-semantic-search/
+/.claude/skills/postgresql-optimization/
+/.claude/skills/prisma-cli/
+/.claude/skills/prisma-client-api/
+/.claude/skills/prisma-database-setup/
+/.claude/skills/react-frontend/
+/.claude/skills/security-review/
+/.claude/skills/using-n8n-mcp-skills/
+/skills-lock.json
+
+# runbook con credenciales operativas reales — nunca debe versionarse
+/scripts/data/totem-runbook.txt
