@@ -32,10 +32,15 @@ const DEFAULT_MODEL_BY_PROVIDER: Record<LLMProviderName, string> = {
   openai: "gpt-5",
   "azure-openai": "gpt-4o",
   // "llama-3.3-70b-versatile" (el default más común en ejemplos de Groq) se
-  // da de baja el 2026-08-16 — se usa directamente el reemplazo recomendado
-  // por Groq (gpt-oss-120b, modelo abierto de OpenAI, soporta tool-calling)
-  // para no heredar una fecha de vencimiento a dos semanas de escribir esto.
-  groq: "openai/gpt-oss-120b",
+  // da de baja el 2026-08-16, y tanto ese como llama-3.1-8b-instant fallan
+  // de forma intermitente al usar tool-calling en Groq ("Failed to call a
+  // function", verificado en vivo). De los reemplazos recomendados por Groq,
+  // gpt-oss-120b devuelve un 400 al combinar tools con salida estructurada
+  // (ver isStructuredOutputWithToolsUnsupported en VercelAiLLMProvider) y
+  // además falla el tool-calling puro con un error de validación interno
+  // ("attempted to call tool 'json'"); gpt-oss-20b sí maneja tool-calling de
+  // forma confiable — es el que se usa por defecto.
+  groq: "openai/gpt-oss-20b",
   ollama: "llama3.2",
 };
 
