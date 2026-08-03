@@ -28,10 +28,16 @@ export function canManageCategories(role: Role): boolean {
 }
 
 // D5 (ARCHITECTURE.md §11/§5.3): Document no tiene flujo de revisión — queda
-// disponible apenas se sube. Subir sigue siendo una acción de N2/Admin
-// (brief: "sube manuales" es acción de Ingeniero N2).
+// disponible apenas se sube. Ampliado (pedido explícito del usuario,
+// 2026-07-31) a los 4 roles operativos — originalmente solo admin/N2 (brief:
+// "sube manuales" era acción de Ingeniero N2), pero N1 y Supervisor también
+// necesitan poder subir documentación real en la operación diaria.
+// "readonly" queda deliberadamente afuera: es el único rol que no puede
+// escribir nada en el resto de la plataforma (tampoco crea/edita
+// procedimientos, ver canCreateProcedure/canEditProcedure) — subir un
+// documento contradice ese contrato.
 export function canUploadDocument(role: Role): boolean {
-  return role === "admin" || role === "engineer_l2";
+  return role !== "readonly";
 }
 
 // Todos los roles, incluido Solo Lectura (UI_UX_DESIGN.md §3.1, matriz de
