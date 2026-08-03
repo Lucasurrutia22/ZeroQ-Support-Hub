@@ -44,8 +44,14 @@ const DEFAULT_MODEL_BY_PROVIDER: Record<LLMProviderName, string> = {
   ollama: "llama3.2",
 };
 
+// .trim(): confirmado en vivo (2026-07-31) que pegar un valor en el
+// dashboard de Vercel puede dejar espacios/tabs invisibles alrededor
+// ("\tgroq" en vez de "groq") — un typo de un solo carácter que rompe la
+// comparación exacta de resolveProviderName() y tira todo el asistente sin
+// ningún indicio visual en la UI de Vercel. Más barato tolerarlo acá que
+// confiar en que cada variable se pegue perfecta.
 function requireEnv(name: string): string {
-  const value = process.env[name];
+  const value = process.env[name]?.trim();
   if (!value) {
     throw new Error(
       `Falta la variable de entorno "${name}", requerida por LLM_PROVIDER="${process.env.LLM_PROVIDER}".`,
@@ -55,7 +61,7 @@ function requireEnv(name: string): string {
 }
 
 function resolveProviderName(): LLMProviderName {
-  const raw = process.env.LLM_PROVIDER ?? "anthropic";
+  const raw = (process.env.LLM_PROVIDER ?? "anthropic").trim();
   const valid: LLMProviderName[] = ["anthropic", "openai", "azure-openai", "groq", "ollama"];
   if (!valid.includes(raw as LLMProviderName)) {
     throw new Error(
